@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role { SUPER_ADMIN ADMIN }
+enum ContentStatus { DRAFT PUBLISHED }
+enum CertificateTemplate { CLASSIC_GREEN MODERN_EMERALD }
+
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  passwordHash String
+  role Role @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Unit {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  address String
+  phone String?
+  email String?
+  description String? @db.Text
+  mapEmbedUrl String? @db.Text
+  isHeadOffice Boolean @default(false)
+  isActive Boolean @default(true)
+  sortOrder Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([isActive, sortOrder])
+}
+
+model PageContent {
+  id String @id @default(cuid())
+  key String @unique
+  title String
+  body String @db.Text
+  coverImage String? @db.Text
+  status ContentStatus @default(DRAFT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InstitutionSetting {
+  id String @id @default("main")
+  institutionName String
+  tagline String?
+  address String? @db.Text
+  phone String?
+  email String?
+  logoUrl String? @db.Text
+  directorName String?
+  signatureUrl String? @db.Text
+  certificateCity String?
+  updatedAt DateTime @updatedAt
+}
+
+model Certificate {
+  id String @id @default(cuid())
+  certificateNo String @unique
+  verificationCode String @unique @default(cuid())
+  studentName String
+  programName String?
+  description String @db.Text
+  issuedAt DateTime
+  institutionName String
+  directorName String
+  logoUrl String? @db.Text
+  signatureUrl String? @db.Text
+  template CertificateTemplate @default(CLASSIC_GREEN)
+  createdById String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([studentName])
+  @@index([issuedAt])
+}
