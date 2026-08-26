@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/guards";
+export const runtime = "nodejs";
+const schema = z.object({ studentName: z.string().trim().min(3).max(150), programName: z.string().trim().max(150).optional().or(z.literal("")), description: z.string().trim().min(10).max(3000), issuedAt: z.coerce.date(), institutionName: z.string().trim().min(3).max(150), directorName: z.string().trim().min(3).max(150), logoUrl: z.string().url().optional().or(z.literal("")), signatureUrl: z.string().url().optional().or(z.literal("")), template: z.enum(["CLASSIC_GREEN", "MODERN_EMERALD"]) });
+export async function POST(request: Request) { try { const session = await requireAdmin(); const data = schema.parse(await request.json()); const year = data.issuedAt.getFullYear(); const start = new Date(`${year}-01-01T00:00:00.000Z`); const end = new Date(`${year + 1}-01-01T00:00:00.000Z`); const count = await db.certificate.count({ where: { issuedAt: { gte: start, lt: end } } }); const certificate = await db.certificate.create({ data: { ...data, programName: data.programName || null, logoUrl: data.logoUrl || null, signatureUrl: data.signatureUrl || null, certificateNo: `AB/${String(count + 1).padStart(4, "0")}/${year}`, createdById: session.user.id } }); return NextResponse.json(certificate, { status: 201 }); } catch { return NextResponse.json({ error: "Data sertifikat tidak valid atau akses ditolak." }, { status: 422 }); } }
