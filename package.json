@@ -17,7 +17,7 @@
     "@auth/prisma-adapter": "^2.7.4",
     "@prisma/client": "6.19.3",
     "bcryptjs": "2.4.3",
-    "next": "15.2.4",
+    "next": "^15.5.24",
     "next-auth": "5.0.0-beta.25",
     "react": "19.0.0",
     "react-dom": "19.0.0",
