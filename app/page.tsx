@@ -73,7 +73,7 @@ export default function HomePage() {
             <ul className="mt-5 space-y-4 text-slate-700">
               <li>Program belajar sesuai kebutuhan siswa</li>
               <li>Unit yang mudah dijangkau</li>
-              <li>Informasi akademik yang selalu diperbarui</li>
+              <li>Metode belajar asyik dan nyaman </li>
             </ul>
           </div>
         </div>
@@ -85,17 +85,16 @@ export default function HomePage() {
         </h2>
 
         <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-          Konten halaman ini dapat dikembangkan melalui panel admin sesuai
-          profil, program, informasi, galeri, dan kebutuhan lembaga.
+        
         </p>
       </section>
 
       <footer id="kontak" className="bg-emerald-900 px-6 py-10 text-emerald-50">
         <div className="mx-auto max-w-6xl">
-          <p className="text-xl font-bold">Ayo Belajar</p>
+          <p className="text-xl font-bold"></p>
 
           <p className="mt-2 text-emerald-100">
-            Cawan, Widodomartani, Ngemplak, Sleman, DIY
+            Lokasi bimbingan belajar di unit terdekat
           </p>
         </div>
       </footer>
