@@ -9,8 +9,7 @@ export default function HomePage() {
             href="/"
             className="text-2xl font-extrabold text-emerald-700"
           >
-            ayo belajar
-          </Link>
+                      </Link>
 
           <div className="hidden gap-6 text-sm font-semibold text-slate-700 md:flex">
             <a href="#tentang">Tentang</a>
