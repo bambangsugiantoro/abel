@@ -41,14 +41,12 @@ export function CertificateSheet({
               </div>
             )}
 
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[.25em] text-emerald-700">
-                Lembaga Bimbingan Belajar
-              </p>
-              <h1 className="font-serif text-3xl font-bold text-slate-950">
+          <div>
+              <p className="font-serif text-2xl font-extrabold text-emerald-800">
                 {certificate.institutionName}
-              </h1>
+              </p>
             </div>
+
           </div>
 
           <p className="text-right text-xs text-slate-500">
