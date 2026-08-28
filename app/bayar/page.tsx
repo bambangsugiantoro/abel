@@ -1,34 +1,40 @@
 'use client';
 
-import React, { useState } from 'react';
-
-// DAFTAR PAKET BIMBEL (Bisa Anda edit atau tambah kapan saja)
-const DAFTAR_PAKET = [
-  {
-    id: 'privat-inggris-5bln',
-    nama: 'Privat Bahasa Inggris (5 Bulan)',
-    harga: 1000000,
-    keterangan: 'Program intensif privat bahasa Inggris selama 5 bulan.',
-  },
-  {
-    id: 'reguler-sd-smp',
-    nama: 'Reguler SD / SMP (1 Bulan)',
-    harga: 350000,
-    keterangan: 'Bimbingan mata pelajaran inti sekolah.',
-  },
-];
+import React, { useState, useEffect } from 'react';
 
 export default function HalamanPembayaran() {
-  const [paketPilihan, setPaketPilihan] = useState(DAFTAR_PAKET[0]);
+  const [daftarPaket, setDaftarPaket] = useState<any[]>([]);
+  const [paketPilihan, setPaketPilihan] = useState<any>(null);
   const [nama, setNama] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [hasilQRIS, setHasilQRIS] = useState<any>(null);
+
+  // Ambil paket otomatis dari database Neon
+  useEffect(() => {
+    async function loadPaket() {
+      try {
+        const res = await fetch('/api/admin/paket');
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setDaftarPaket(data);
+          setPaketPilihan(data[0]);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingData(false);
+      }
+    }
+    loadPaket();
+  }, []);
 
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!paketPilihan) return alert('Silakan pilih paket bimbel terlebih dahulu');
 
+    setLoading(true);
     try {
       const res = await fetch('/api/bayar-qris', {
         method: 'POST',
@@ -36,8 +42,8 @@ export default function HalamanPembayaran() {
         body: JSON.stringify({
           nama,
           whatsapp,
-          paket: paketPilihan.nama,
-          nominal: paketPilihan.harga,
+          paket: paketPilihan.title,
+          nominal: paketPilihan.price,
         }),
       });
 
@@ -59,7 +65,7 @@ export default function HalamanPembayaran() {
     if (!qrUrl) return;
     const link = document.createElement('a');
     link.href = qrUrl;
-    link.download = `QRIS-${paketPilihan.nama}-${hasilQRIS.orderId}.png`;
+    link.download = `QRIS-${paketPilihan?.title}-${hasilQRIS.orderId}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -80,27 +86,36 @@ export default function HalamanPembayaran() {
           <form onSubmit={handleBuatQRIS} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-2">PILIH PAKET BIMBEL</label>
-              <div className="space-y-2">
-                {DAFTAR_PAKET.map((p) => (
-                  <label
-                    key={p.id}
-                    onClick={() => setPaketPilihan(p)}
-                    className={`flex justify-between items-center p-3.5 rounded-xl border-2 cursor-pointer transition ${
-                      paketPilihan.id === p.id
-                        ? 'border-emerald-500 bg-emerald-50/50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div>
-                      <p className="text-sm font-bold text-gray-800">{p.nama}</p>
-                      <p className="text-xs text-gray-500">{p.keterangan}</p>
-                    </div>
-                    <span className="text-sm font-black text-emerald-600">
-                      Rp {p.harga.toLocaleString('id-ID')}
-                    </span>
-                  </label>
-                ))}
-              </div>
+              
+              {loadingData ? (
+                <p className="text-xs text-gray-400 py-4 text-center">Memuat daftar paket bimbel...</p>
+              ) : daftarPaket.length === 0 ? (
+                <div className="p-4 border border-dashed rounded-xl text-center text-xs text-gray-500">
+                  Belum ada paket bimbel yang tersedia. Silakan hubungi admin.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {daftarPaket.map((p) => (
+                    <label
+                      key={p.id}
+                      onClick={() => setPaketPilihan(p)}
+                      className={`flex justify-between items-center p-3.5 rounded-xl border-2 cursor-pointer transition ${
+                        paketPilihan?.id === p.id
+                          ? 'border-emerald-500 bg-emerald-50/50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">{p.title}</p>
+                        <p className="text-xs text-gray-500">{p.shortDesc || '-'}</p>
+                      </div>
+                      <span className="text-sm font-black text-emerald-600">
+                        Rp {(p.price || 0).toLocaleString('id-ID')}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="pt-2 border-t border-gray-100">
@@ -129,10 +144,10 @@ export default function HalamanPembayaran() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || daftarPaket.length === 0}
               className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shadow-sm mt-4 disabled:opacity-50"
             >
-              {loading ? 'Membuat QRIS...' : `Bayar Rp ${paketPilihan.harga.toLocaleString('id-ID')} via QRIS`}
+              {loading ? 'Membuat QRIS...' : `Bayar Rp ${(paketPilihan?.price || 0).toLocaleString('id-ID')} via QRIS`}
             </button>
           </form>
         ) : (
@@ -159,7 +174,7 @@ export default function HalamanPembayaran() {
             </div>
 
             <p className="text-xs text-gray-500 mb-4">
-              Scan via BCA Mobile, Mandiri, BRI, GoPay, OVO, Dana, atau ShopeePay. Nominal sudah terisi otomatis Rp {Number(hasilQRIS.amount).toLocaleString('id-ID')}.
+              Scan via BCA Mobile, Mandiri, BRI, GoPay, OVO, Dana, atau ShopeePay. Nominal otomatis terisi Rp {Number(hasilQRIS.amount).toLocaleString('id-ID')}.
             </p>
 
             <div className="space-y-2">
