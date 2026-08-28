@@ -25,64 +25,76 @@ export function CertificateSheet({
   }).format(new Date(certificate.issuedAt));
 
   return (
-    <section className="certificate mx-auto min-h-[210mm] w-[297mm] bg-white p-[14mm] text-slate-800 shadow-2xl print:shadow-none">
-      <div className="flex min-h-[182mm] flex-col border-[3px] border-emerald-700 p-[12mm] outline outline-[8px] outline-emerald-100">
-        <header className="flex items-center justify-between border-b border-emerald-200 pb-5">
+    <section className="certificate mx-auto min-h-[210mm] w-[297mm] overflow-hidden bg-[#fbf7ed] p-[10mm] text-slate-800 shadow-2xl print:shadow-none">
+      <div className="relative flex min-h-[190mm] flex-col overflow-hidden border-2 border-[#b58a35] bg-[radial-gradient(circle_at_14%_10%,rgba(255,255,255,0.96),rgba(251,247,237,0.97)_44%,rgba(239,228,201,0.92))] p-[14mm] outline outline-[6px] outline-[#e7d39f]">
+        <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full border-[18px] border-[#d7b664]/20" />
+        <div className="pointer-events-none absolute -bottom-28 -right-24 h-80 w-80 rounded-full border-[22px] border-[#d7b664]/20" />
+        <div className="pointer-events-none absolute inset-[7mm] border border-[#b58a35]/35" />
+
+        <header className="relative flex items-center justify-between border-b border-[#cba85a]/60 pb-5">
           <div className="flex items-center gap-4">
             {certificate.logoUrl ? (
               <img
                 src={certificate.logoUrl}
                 alt="Logo lembaga"
-                className="h-16 w-16 object-contain"
+                className="h-16 w-16 rounded-full object-contain"
               />
             ) : (
-              <div className="grid h-16 w-16 place-items-center rounded-full bg-emerald-700 font-serif text-2xl font-bold text-white">
+              <div className="grid h-16 w-16 place-items-center rounded-full border-2 border-[#b58a35] bg-[#174a43] font-serif text-2xl font-bold text-[#f7e6ae]">
                 AB
               </div>
             )}
 
-          <div>
-              <p className="font-serif text-2xl font-extrabold text-emerald-800">
+            <div>
+              <p className="font-serif text-2xl font-extrabold tracking-wide text-[#174a43]">
                 {certificate.institutionName}
               </p>
+              <div className="mt-1 h-px w-28 bg-[#b58a35]" />
             </div>
-
           </div>
 
-          <p className="text-right text-xs text-slate-500">
-            No. Sertifikat
-            <br />
-            <span className="font-semibold text-slate-800">
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7f6427]">
+              Nomor Sertifikat
+            </p>
+            <p className="mt-1 font-serif text-sm font-bold text-slate-800">
               {certificate.certificateNo}
-            </span>
-          </p>
+            </p>
+          </div>
         </header>
 
-        <main className="flex flex-1 flex-col items-center justify-center text-center">
-          <p className="font-serif text-2xl font-extrabold italic text-emerald-800">
+        <main className="relative flex flex-1 flex-col items-center justify-center py-8 text-center">
+          <p className="font-serif text-xl font-extrabold italic text-[#174a43]">
             Penghargaan diberikan kepada:
           </p>
 
-          <h2 className="mt-5 border-b-2 border-emerald-600 px-10 pb-3 font-serif text-5xl font-bold text-slate-950">
+          <div className="mt-5 flex w-full max-w-[220mm] items-center gap-5">
+            <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[#b58a35]" />
+            <span className="h-2 w-2 rotate-45 border border-[#b58a35] bg-[#f7e6ae]" />
+            <span className="h-px flex-1 bg-gradient-to-l from-transparent to-[#b58a35]" />
+          </div>
+
+          <h2 className="mt-5 max-w-[230mm] font-serif text-5xl font-bold leading-tight text-[#173d37]">
             {certificate.studentName}
           </h2>
 
+          <div className="mt-5 h-0.5 w-44 bg-[#b58a35]" />
+
           {certificate.programName && (
-            <p className="mt-6 text-lg font-semibold text-emerald-800">
+            <p className="mt-6 text-sm font-extrabold uppercase tracking-[0.18em] text-[#8a6928]">
               {certificate.programName}
             </p>
           )}
 
-          <p className="mt-5 max-w-3xl whitespace-pre-line text-lg leading-relaxed text-slate-700">
+          <p className="mt-5 max-w-3xl whitespace-pre-line font-serif text-lg leading-relaxed text-slate-700">
             {certificate.description}
           </p>
         </main>
 
-        <footer className="grid grid-cols-2 items-end gap-8 pt-8 text-center">
+        <footer className="relative grid grid-cols-2 items-end gap-8 border-t border-[#cba85a]/60 pt-7 text-center">
           <div className="text-sm text-slate-600">
-            Diterbitkan pada
-            <br />
-            <span className="font-semibold text-slate-900">{date}</span>
+            <p className="font-semibold text-[#174a43]">Diterbitkan pada</p>
+            <p className="mt-1 font-serif text-base font-bold text-slate-900">{date}</p>
           </div>
 
           <div>
@@ -96,15 +108,16 @@ export function CertificateSheet({
               <div className="h-16" />
             )}
 
-            <div className="mx-auto w-52 border-t border-slate-500 pt-2 text-sm font-bold text-slate-900">
+            <div className="mx-auto w-52 border-t border-[#8a6928] pt-2 font-serif text-sm font-bold text-slate-900">
               {certificate.directorName}
             </div>
-
-            <p className="mt-1 text-xs text-slate-500">Direktur</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#7f6427]">
+              Direktur
+            </p>
           </div>
         </footer>
 
-        <p className="mt-7 text-center text-[10px] text-slate-400">
+        <p className="relative mt-6 text-center text-[10px] text-slate-500">
           Verifikasi: /sertifikat/{certificate.verificationCode}
         </p>
       </div>
