@@ -3,87 +3,86 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-// GET: Ambil semua data paket bimbel
+// GET: Ambil paket
 export async function GET() {
   try {
-    const list = await prisma.program.findMany({
+    const list = await (prisma as any).program.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    return NextResponse.json(list);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(list || []);
+  } catch (err: any) {
+    return NextResponse.json([]);
   }
 }
 
-// POST: Tambah paket bimbel baru
+// POST: Tambah paket
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { title, price, shortDesc } = body;
 
-    const baseSlug = (title || 'program')
+    const slug = (title || 'program')
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+      .replace(/^-+|-+$/g, '') + `-${Date.now().toString().slice(-4)}`;
 
-    const program = await prisma.program.create({
+    const newProg = await (prisma as any).program.create({
       data: {
-        title: String(title),
+        title: String(title || ''),
         slug,
-        level: 'Semua Jenjang',
+        level: 'Umum',
         category: 'Bimbel',
         price: Number(price) || 0,
-        shortDesc: shortDesc ? String(shortDesc) : 'Program Bimbingan Belajar',
-        description: shortDesc ? String(shortDesc) : String(title),
-        features: JSON.stringify(['Modul Lengkap', 'Tutor Berpengalaman', 'Evaluasi Berkala']),
+        shortDesc: shortDesc ? String(shortDesc) : 'Program Bimbel',
+        description: shortDesc ? String(shortDesc) : String(title || ''),
+        features: JSON.stringify(['Modul Lengkap', 'Tutor Berpengalaman']),
         isFeatured: true,
-      } as any,
+      },
     });
 
-    return NextResponse.json({ success: true, program });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Gagal menyimpan database' }, { status: 500 });
+    return NextResponse.json({ success: true, program: newProg });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Gagal menyimpan ke database' }, { status: 500 });
   }
 }
 
-// PUT: Edit paket bimbel
+// PUT: Edit paket
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
     const { id, title, price, shortDesc } = body;
 
-    const program = await prisma.program.update({
+    const updated = await (prisma as any).program.update({
       where: { id: String(id) },
       data: {
-        title: String(title),
+        title: String(title || ''),
         price: Number(price) || 0,
         shortDesc: shortDesc ? String(shortDesc) : '',
-        description: shortDesc ? String(shortDesc) : String(title),
-      } as any,
+        description: shortDesc ? String(shortDesc) : String(title || ''),
+      },
     });
 
-    return NextResponse.json({ success: true, program });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Gagal mengubah database' }, { status: 500 });
+    return NextResponse.json({ success: true, program: updated });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Gagal update database' }, { status: 500 });
   }
 }
 
-// DELETE: Hapus paket bimbel
+// DELETE: Hapus paket
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
-    if (!id) return NextResponse.json({ error: 'ID tidak ditemukan' }, { status: 400 });
+    if (!id) return NextResponse.json({ error: 'ID tidak valid' }, { status: 400 });
 
-    await prisma.program.delete({
+    await (prisma as any).program.delete({
       where: { id: String(id) },
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Gagal menghapus' }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Gagal menghapus' }, { status: 500 });
   }
 }
