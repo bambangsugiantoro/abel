@@ -36,6 +36,52 @@ const PAKET_DEFAULT: PaketItem[] = [
   },
 ];
 
+// Ekstraktor pintar untuk segala bentuk respon SumoPod
+function extractQRInfo(response: any): { qrImg: string; payUrl: string; rawText: string } {
+  if (!response) return { qrImg: '', payUrl: '', rawText: '' };
+
+  let foundQrString = '';
+  let foundDirectImg = '';
+  let foundPayUrl = '';
+
+  const walk = (item: any) => {
+    if (!item) return;
+    if (typeof item === 'string') {
+      const s = item.trim();
+      // Pola QRIS Standar Nasional (dimulai atau mengandung 000201)
+      if (s.includes('000201')) {
+        foundQrString = s;
+      } else if (s.startsWith('http') && (s.includes('.png') || s.includes('.jpg') || s.includes('qr') || s.includes('chart'))) {
+        if (!foundDirectImg) foundDirectImg = s;
+      } else if (s.startsWith('http') && (s.includes('pay') || s.includes('invoice') || s.includes('sumopod') || s.includes('checkout'))) {
+        if (!foundPayUrl) foundPayUrl = s;
+      }
+    } else if (typeof item === 'object') {
+      for (const k of Object.keys(item)) {
+        walk(item[k]);
+      }
+    }
+  };
+
+  walk(response);
+
+  let finalQrImg = '';
+  if (foundDirectImg) {
+    finalQrImg = foundDirectImg;
+  } else if (foundQrString) {
+    finalQrImg = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(foundQrString)}`;
+  } else if (foundPayUrl) {
+    // Jika hanya mengembalikan link pembayaran checkout SumoPod, kita ubah link tersebut jadi QR
+    finalQrImg = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(foundPayUrl)}`;
+  }
+
+  return {
+    qrImg: finalQrImg,
+    payUrl: foundPayUrl,
+    rawText: JSON.stringify(response, null, 2),
+  };
+}
+
 export default function HalamanPembayaran() {
   const [daftarPaket, setDaftarPaket] = useState<PaketItem[]>(PAKET_DEFAULT);
   const [paketPilihan, setPaketPilihan] = useState<PaketItem>(PAKET_DEFAULT[0]);
@@ -92,7 +138,7 @@ export default function HalamanPembayaran() {
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (data.success || data.orderId || data.data) {
         setHasilQRIS(data);
       } else {
         alert(data.error || 'Terjadi kendala pembuatan QRIS');
@@ -125,7 +171,7 @@ export default function HalamanPembayaran() {
   };
 
   const handleHapusPaket = (id: string) => {
-    if (!confirm('Hapus paket ini dari daftar?')) return;
+    if (!confirm('Hapus paket ini?')) return;
     const updated = daftarPaket.filter((p) => p.id !== id);
     simpanKeStorage(updated);
     if (paketPilihan?.id === id && updated.length > 0) {
@@ -139,31 +185,13 @@ export default function HalamanPembayaran() {
     setPaketPilihan(PAKET_DEFAULT[0]);
   };
 
-  // Ekstraksi QR Code Gambar / String
-  const rawQr =
-    hasilQRIS?.data?.qr_image_url ||
-    hasilQRIS?.data?.data?.qr_image_url ||
-    hasilQRIS?.data?.qr_string ||
-    hasilQRIS?.data?.data?.qr_string ||
-    hasilQRIS?.data?.qr_content ||
-    hasilQRIS?.data?.qr_code ||
-    hasilQRIS?.data?.payment_url ||
-    hasilQRIS?.data?.invoice_url ||
-    hasilQRIS?.qr_string ||
-    hasilQRIS?.qr_image_url;
-
-  // Jika berupa URL gambar langsung gunakan, jika berupa string QRIS ubah jadi gambar QR
-  const qrImageUrl = rawQr
-    ? rawQr.startsWith('http') && !rawQr.includes('000201')
-      ? rawQr
-      : `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rawQr)}`
-    : '';
+  const { qrImg, payUrl, rawText } = extractQRInfo(hasilQRIS);
 
   const handleDownload = () => {
-    if (!qrImageUrl) return;
+    if (!qrImg) return;
     const link = document.createElement('a');
-    link.href = qrImageUrl;
-    link.download = `QRIS-${paketPilihan?.title}-${hasilQRIS.orderId || 'tagihan'}.png`;
+    link.href = qrImg;
+    link.download = `QRIS-${paketPilihan?.title}-${hasilQRIS?.orderId || 'tagihan'}.png`;
     link.target = '_blank';
     document.body.appendChild(link);
     link.click();
@@ -246,23 +274,24 @@ export default function HalamanPembayaran() {
               <span className="bg-amber-100 text-amber-800 text-xs px-3 py-1 rounded-full font-bold">
                 Menunggu Pembayaran
               </span>
-              <h3 className="text-lg font-bold text-gray-800 mt-2">{hasilQRIS.paket}</h3>
+              <h3 className="text-lg font-bold text-gray-800 mt-2">{hasilQRIS.paket || paketPilihan?.title}</h3>
               <p className="text-3xl font-black text-emerald-600 my-2">
-                Rp {Number(hasilQRIS.amount).toLocaleString('id-ID')}
+                Rp {Number(hasilQRIS.amount || paketPilihan?.price).toLocaleString('id-ID')}
               </p>
-              <p className="text-xs text-gray-400">Order ID: {hasilQRIS.orderId}</p>
+              <p className="text-xs text-gray-400">Order ID: {hasilQRIS.orderId || '-'}</p>
 
               {/* TAMPILAN GAMBAR QRIS */}
               <div className="my-4 p-4 bg-white border border-gray-200 rounded-2xl inline-block shadow-sm">
-                {qrImageUrl ? (
+                {qrImg ? (
                   <img
-                    src={qrImageUrl}
+                    src={qrImg}
                     alt="QRIS Ayo Belajar"
                     className="w-60 h-60 object-contain rounded-lg mx-auto"
                   />
                 ) : (
-                  <div className="w-60 h-60 flex items-center justify-center text-xs text-gray-400">
-                    Gagal memuat barcode QRIS
+                  <div className="w-60 p-4 text-left bg-gray-50 rounded-lg text-[10px] text-gray-600 font-mono overflow-auto max-h-56">
+                    <p className="font-bold text-red-500 mb-1">Respon SumoPod:</p>
+                    <pre>{rawText}</pre>
                   </div>
                 )}
               </div>
@@ -272,13 +301,24 @@ export default function HalamanPembayaran() {
               </p>
 
               <div className="space-y-2">
-                {qrImageUrl && (
+                {qrImg && (
                   <button
                     onClick={handleDownload}
                     className="w-full py-2.5 bg-white border border-emerald-600 text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition"
                   >
                     📥 Download Gambar QRIS
                   </button>
+                )}
+
+                {payUrl && (
+                  <a
+                    href={payUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-full py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 text-xs"
+                  >
+                    🔗 Buka Tautan Pembayaran SumoPod Langsung
+                  </a>
                 )}
 
                 <button
