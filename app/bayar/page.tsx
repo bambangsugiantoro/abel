@@ -2,44 +2,77 @@
 
 import React, { useState, useEffect } from 'react';
 
+interface PaketItem {
+  id: string;
+  title: string;
+  price: number;
+  shortDesc: string;
+}
+
+const PAKET_DEFAULT: PaketItem[] = [
+  {
+    id: 'p1',
+    title: 'Paket Konsultasi Belajar',
+    price: 10000,
+    shortDesc: 'Sesi konsultasi belajar dan tanya jawab materi',
+  },
+  {
+    id: 'p2',
+    title: 'Bimbel Reguler SD (Bulanan)',
+    price: 350000,
+    shortDesc: 'Bimbingan belajar tatap muka 3x seminggu + modul',
+  },
+  {
+    id: 'p3',
+    title: 'Bimbel Reguler SMP (Bulanan)',
+    price: 450000,
+    shortDesc: 'Pendampingan materi sekolah + persiapan ujian',
+  },
+  {
+    id: 'p4',
+    title: 'Bimbel Intensif SMA / UTBK',
+    price: 650000,
+    shortDesc: 'Fokus TPS, Literasi, dan Penalaran Matematika',
+  },
+];
+
 export default function HalamanPembayaran() {
-  const [daftarPaket, setDaftarPaket] = useState<any[]>([]);
-  const [paketPilihan, setPaketPilihan] = useState<any>(null);
+  const [daftarPaket, setDaftarPaket] = useState<PaketItem[]>(PAKET_DEFAULT);
+  const [paketPilihan, setPaketPilihan] = useState<PaketItem>(PAKET_DEFAULT[0]);
   const [nama, setNama] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
   const [hasilQRIS, setHasilQRIS] = useState<any>(null);
 
-  // Fitur Kelola Paket (Admin Mode)
+  // Fitur Admin Kelola Paket
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [passInput, setPassInput] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newPrice, setNewPrice] = useState<number | ''>('');
   const [newDesc, setNewDesc] = useState('');
-  const [savingPaket, setSavingPaket] = useState(false);
 
   const ADMIN_PASS = 'AyoBelajar2026';
 
-  const loadPaket = async () => {
-    try {
-      const res = await fetch('/api/paket-list');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setDaftarPaket(data);
-        if (data.length > 0) setPaketPilihan(data[0]);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingData(false);
-    }
-  };
-
   useEffect(() => {
-    loadPaket();
+    try {
+      const saved = localStorage.getItem('ayobelajar_paket_custom');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setDaftarPaket(parsed);
+          setPaketPilihan(parsed[0]);
+        }
+      }
+    } catch {
+      // fallback default
+    }
   }, []);
+
+  const simpanKeStorage = (list: PaketItem[]) => {
+    setDaftarPaket(list);
+    localStorage.setItem('ayobelajar_paket_custom', JSON.stringify(list));
+  };
 
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,48 +104,39 @@ export default function HalamanPembayaran() {
     }
   };
 
-  const handleTambahPaket = async (e: React.FormEvent) => {
+  const handleTambahPaket = (e: React.FormEvent) => {
     e.preventDefault();
-    setSavingPaket(true);
-    try {
-      const res = await fetch('/api/paket-list', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newTitle,
-          price: Number(newPrice),
-          shortDesc: newDesc,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        alert('Paket bimbel berhasil ditambahkan!');
-        setNewTitle('');
-        setNewPrice('');
-        setNewDesc('');
-        loadPaket();
-      } else {
-        alert(data.error || 'Gagal menambahkan paket');
-      }
-    } catch {
-      alert('Gagal menghubungi server');
-    } finally {
-      setSavingPaket(false);
+    if (!newTitle || !newPrice) return alert('Nama dan harga paket wajib diisi');
+
+    const itemBaru: PaketItem = {
+      id: `p-${Date.now()}`,
+      title: newTitle,
+      price: Number(newPrice),
+      shortDesc: newDesc || 'Paket Bimbingan Belajar',
+    };
+
+    const updated = [itemBaru, ...daftarPaket];
+    simpanKeStorage(updated);
+    setPaketPilihan(itemBaru);
+    setNewTitle('');
+    setNewPrice('');
+    setNewDesc('');
+    alert('Paket bimbel berhasil ditambahkan!');
+  };
+
+  const handleHapusPaket = (id: string) => {
+    if (!confirm('Hapus paket ini dari daftar?')) return;
+    const updated = daftarPaket.filter((p) => p.id !== id);
+    simpanKeStorage(updated);
+    if (paketPilihan?.id === id && updated.length > 0) {
+      setPaketPilihan(updated[0]);
     }
   };
 
-  const handleHapusPaket = async (id: string) => {
-    if (!confirm('Hapus paket ini?')) return;
-    try {
-      const res = await fetch(`/api/paket-list?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        loadPaket();
-      } else {
-        alert('Gagal menghapus');
-      }
-    } catch {
-      alert('Gagal menghapus');
-    }
+  const handleResetDefault = () => {
+    if (!confirm('Kembalikan ke paket default bawaan?')) return;
+    simpanKeStorage(PAKET_DEFAULT);
+    setPaketPilihan(PAKET_DEFAULT[0]);
   };
 
   const handleDownload = () => {
@@ -126,53 +150,46 @@ export default function HalamanPembayaran() {
     document.body.removeChild(link);
   };
 
-  const qrImageUrl = hasilQRIS?.data?.qr_image_url || hasilQRIS?.data?.data?.qr_image_url || hasilQRIS?.data?.payment_url;
+  const qrImageUrl =
+    hasilQRIS?.data?.qr_image_url ||
+    hasilQRIS?.data?.data?.qr_image_url ||
+    hasilQRIS?.data?.payment_url;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-xl mx-auto space-y-4">
-        
-        {/* KARTU UTAMA PEMBAYARAN */}
+        {/* KARTU UTAMA FORM PEMBAYARAN */}
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-200">
           <div className="text-center mb-6">
             <h1 className="text-2xl font-black text-gray-800">Pembayaran Bimbel Ayo Belajar</h1>
-            <p className="text-sm text-gray-500 mt-1">Pilih paket dan bayar otomatis via QRIS</p>
+            <p className="text-sm text-gray-500 mt-1">Pilih paket dan scan QRIS otomatis</p>
           </div>
 
           {!hasilQRIS ? (
             <form onSubmit={handleBuatQRIS} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-2">PILIH PAKET BIMBEL</label>
-                
-                {loadingData ? (
-                  <p className="text-xs text-gray-400 py-4 text-center">Memuat daftar paket...</p>
-                ) : daftarPaket.length === 0 ? (
-                  <div className="p-4 border border-dashed rounded-xl text-center text-xs text-gray-500">
-                    Belum ada paket bimbel. Klik "Kelola Paket (Admin)" di bawah untuk menambah paket.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {daftarPaket.map((p) => (
-                      <label
-                        key={p.id}
-                        onClick={() => setPaketPilihan(p)}
-                        className={`flex justify-between items-center p-3.5 rounded-xl border-2 cursor-pointer transition ${
-                          paketPilihan?.id === p.id
-                            ? 'border-emerald-500 bg-emerald-50/50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <div>
-                          <p className="text-sm font-bold text-gray-800">{p.title}</p>
-                          <p className="text-xs text-gray-500">{p.shortDesc || '-'}</p>
-                        </div>
-                        <span className="text-sm font-black text-emerald-600">
-                          Rp {(Number(p.price) || 0).toLocaleString('id-ID')}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )}
+                <div className="space-y-2">
+                  {daftarPaket.map((p) => (
+                    <label
+                      key={p.id}
+                      onClick={() => setPaketPilihan(p)}
+                      className={`flex justify-between items-center p-3.5 rounded-xl border-2 cursor-pointer transition ${
+                        paketPilihan?.id === p.id
+                          ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">{p.title}</p>
+                        <p className="text-xs text-gray-500">{p.shortDesc}</p>
+                      </div>
+                      <span className="text-sm font-black text-emerald-600">
+                        Rp {p.price.toLocaleString('id-ID')}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div className="pt-2 border-t border-gray-100">
@@ -201,10 +218,12 @@ export default function HalamanPembayaran() {
 
               <button
                 type="submit"
-                disabled={loading || daftarPaket.length === 0}
+                disabled={loading}
                 className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shadow-sm mt-4 disabled:opacity-50"
               >
-                {loading ? 'Membuat QRIS...' : `Bayar Rp ${(Number(paketPilihan?.price) || 0).toLocaleString('id-ID')} via QRIS`}
+                {loading
+                  ? 'Membuat QRIS...'
+                  : `Bayar Rp ${(paketPilihan?.price || 0).toLocaleString('id-ID')} via QRIS`}
               </button>
             </form>
           ) : (
@@ -255,7 +274,7 @@ export default function HalamanPembayaran() {
           )}
         </div>
 
-        {/* TOMBOL PENGELOLA PAKET ADMIN */}
+        {/* TOMBOL PENGELOLA ADMIN */}
         <div className="text-center">
           <button
             onClick={() => setShowAdmin(!showAdmin)}
@@ -265,9 +284,9 @@ export default function HalamanPembayaran() {
           </button>
         </div>
 
-        {/* PANEL ADMIN PENGELOLA PAKET */}
+        {/* PANEL ADMIN DINAMIS */}
         {showAdmin && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mt-4">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
             {!isAdminAuth ? (
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-gray-800">Verifikasi Admin</h3>
@@ -277,7 +296,7 @@ export default function HalamanPembayaran() {
                     placeholder="Masukkan Password Admin"
                     value={passInput}
                     onChange={(e) => setPassInput(e.target.value)}
-                    className="flex-1 p-2 border rounded-lg text-xs"
+                    className="flex-1 p-2 border rounded-lg text-xs focus:outline-none"
                   />
                   <button
                     onClick={() => {
@@ -292,7 +311,16 @@ export default function HalamanPembayaran() {
               </div>
             ) : (
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-gray-800 border-b pb-2">➕ Tambah Paket Baru</h3>
+                <div className="flex justify-between items-center border-b pb-2">
+                  <h3 className="text-sm font-bold text-gray-800">➕ Tambah Paket Bimbel</h3>
+                  <button
+                    onClick={handleResetDefault}
+                    className="text-[10px] text-gray-400 hover:text-red-500 underline"
+                  >
+                    Reset Paket Awal
+                  </button>
+                </div>
+
                 <form onSubmit={handleTambahPaket} className="space-y-3">
                   <div>
                     <label className="text-[11px] font-bold text-gray-600">Nama Paket</label>
@@ -302,7 +330,7 @@ export default function HalamanPembayaran() {
                       placeholder="Contoh: Paket Konsultasi Belajar"
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
-                      className="w-full p-2 border rounded-lg text-xs"
+                      className="w-full p-2 border rounded-lg text-xs focus:outline-none"
                     />
                   </div>
                   <div>
@@ -313,39 +341,41 @@ export default function HalamanPembayaran() {
                       placeholder="Contoh: 10000"
                       value={newPrice}
                       onChange={(e) => setNewPrice(Number(e.target.value))}
-                      className="w-full p-2 border rounded-lg text-xs"
+                      className="w-full p-2 border rounded-lg text-xs focus:outline-none"
                     />
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-gray-600">Keterangan Singkat</label>
                     <input
                       type="text"
-                      placeholder="Contoh: Program bimbingan konsultasi..."
+                      placeholder="Contoh: Sesi konsultasi tatap muka..."
                       value={newDesc}
                       onChange={(e) => setNewDesc(e.target.value)}
-                      className="w-full p-2 border rounded-lg text-xs"
+                      className="w-full p-2 border rounded-lg text-xs focus:outline-none"
                     />
                   </div>
                   <button
                     type="submit"
-                    disabled={savingPaket}
-                    className="w-full py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700"
+                    className="w-full py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition"
                   >
-                    {savingPaket ? 'Menyimpan...' : 'Simpan & Terbitkan Paket'}
+                    Simpan & Terbitkan Paket
                   </button>
                 </form>
 
-                <h3 className="text-sm font-bold text-gray-800 border-b pt-3 pb-2">Daftar Paket Terbit</h3>
+                <h3 className="text-sm font-bold text-gray-800 border-b pt-3 pb-2">Daftar Paket Aktif</h3>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {daftarPaket.map((p) => (
-                    <div key={p.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-lg text-xs border">
+                    <div
+                      key={p.id}
+                      className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg text-xs border"
+                    >
                       <div>
                         <p className="font-bold text-gray-800">{p.title}</p>
-                        <p className="text-emerald-600 font-bold">Rp {(Number(p.price) || 0).toLocaleString('id-ID')}</p>
+                        <p className="text-emerald-600 font-bold">Rp {p.price.toLocaleString('id-ID')}</p>
                       </div>
                       <button
                         onClick={() => handleHapusPaket(p.id)}
-                        className="px-2 py-1 bg-red-100 text-red-600 font-bold rounded hover:bg-red-200 text-[10px]"
+                        className="px-2.5 py-1 bg-red-100 text-red-600 font-bold rounded hover:bg-red-200 text-[10px]"
                       >
                         Hapus
                       </button>
@@ -356,7 +386,6 @@ export default function HalamanPembayaran() {
             )}
           </div>
         )}
-
       </div>
     </div>
   );
