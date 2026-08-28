@@ -44,7 +44,7 @@ export default function HalamanPembayaran() {
   const [loading, setLoading] = useState(false);
   const [hasilQRIS, setHasilQRIS] = useState<any>(null);
 
-  // Fitur Admin Kelola Paket
+  // Admin Mode
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [passInput, setPassInput] = useState('');
@@ -65,7 +65,7 @@ export default function HalamanPembayaran() {
         }
       }
     } catch {
-      // fallback default
+      // fallback
     }
   }, []);
 
@@ -139,26 +139,41 @@ export default function HalamanPembayaran() {
     setPaketPilihan(PAKET_DEFAULT[0]);
   };
 
+  // Ekstraksi QR Code Gambar / String
+  const rawQr =
+    hasilQRIS?.data?.qr_image_url ||
+    hasilQRIS?.data?.data?.qr_image_url ||
+    hasilQRIS?.data?.qr_string ||
+    hasilQRIS?.data?.data?.qr_string ||
+    hasilQRIS?.data?.qr_content ||
+    hasilQRIS?.data?.qr_code ||
+    hasilQRIS?.data?.payment_url ||
+    hasilQRIS?.data?.invoice_url ||
+    hasilQRIS?.qr_string ||
+    hasilQRIS?.qr_image_url;
+
+  // Jika berupa URL gambar langsung gunakan, jika berupa string QRIS ubah jadi gambar QR
+  const qrImageUrl = rawQr
+    ? rawQr.startsWith('http') && !rawQr.includes('000201')
+      ? rawQr
+      : `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rawQr)}`
+    : '';
+
   const handleDownload = () => {
-    const qrUrl = hasilQRIS?.data?.qr_image_url || hasilQRIS?.data?.payment_url;
-    if (!qrUrl) return;
+    if (!qrImageUrl) return;
     const link = document.createElement('a');
-    link.href = qrUrl;
-    link.download = `QRIS-${paketPilihan?.title}-${hasilQRIS.orderId}.png`;
+    link.href = qrImageUrl;
+    link.download = `QRIS-${paketPilihan?.title}-${hasilQRIS.orderId || 'tagihan'}.png`;
+    link.target = '_blank';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const qrImageUrl =
-    hasilQRIS?.data?.qr_image_url ||
-    hasilQRIS?.data?.data?.qr_image_url ||
-    hasilQRIS?.data?.payment_url;
-
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-xl mx-auto space-y-4">
-        {/* KARTU UTAMA FORM PEMBAYARAN */}
+        {/* FORM PEMBAYARAN */}
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-200">
           <div className="text-center mb-6">
             <h1 className="text-2xl font-black text-gray-800">Pembayaran Bimbel Ayo Belajar</h1>
@@ -237,20 +252,23 @@ export default function HalamanPembayaran() {
               </p>
               <p className="text-xs text-gray-400">Order ID: {hasilQRIS.orderId}</p>
 
-              <div className="my-4 p-4 bg-gray-50 border rounded-2xl inline-block">
+              {/* TAMPILAN GAMBAR QRIS */}
+              <div className="my-4 p-4 bg-white border border-gray-200 rounded-2xl inline-block shadow-sm">
                 {qrImageUrl ? (
                   <img
                     src={qrImageUrl}
                     alt="QRIS Ayo Belajar"
-                    className="w-56 h-56 object-contain rounded-lg shadow-sm mx-auto"
+                    className="w-60 h-60 object-contain rounded-lg mx-auto"
                   />
                 ) : (
-                  <p className="text-sm text-gray-400 py-16">Gambar QRIS sedang diproses...</p>
+                  <div className="w-60 h-60 flex items-center justify-center text-xs text-gray-400">
+                    Gagal memuat barcode QRIS
+                  </div>
                 )}
               </div>
 
               <p className="text-xs text-gray-500 mb-4">
-                Scan via BCA Mobile, Mandiri, BRI, GoPay, OVO, Dana, atau ShopeePay.
+                Scan via BCA Mobile, Mandiri, BRI, BNI, GoPay, OVO, Dana, atau ShopeePay.
               </p>
 
               <div className="space-y-2">
