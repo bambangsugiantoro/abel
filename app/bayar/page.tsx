@@ -11,15 +11,15 @@ export default function HalamanPembayaran() {
   const [loadingData, setLoadingData] = useState(true);
   const [hasilQRIS, setHasilQRIS] = useState<any>(null);
 
-  // Ambil paket otomatis dari database Neon
   useEffect(() => {
     async function loadPaket() {
       try {
-        const res = await fetch('/api/admin/paket');
+        const res = await fetch('/api/admin/programs');
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setDaftarPaket(data);
-          setPaketPilihan(data[0]);
+        const list = Array.isArray(data) ? data : data?.programs || [];
+        if (list.length > 0) {
+          setDaftarPaket(list);
+          setPaketPilihan(list[0]);
         }
       } catch (e) {
         console.error(e);
@@ -91,7 +91,7 @@ export default function HalamanPembayaran() {
                 <p className="text-xs text-gray-400 py-4 text-center">Memuat daftar paket bimbel...</p>
               ) : daftarPaket.length === 0 ? (
                 <div className="p-4 border border-dashed rounded-xl text-center text-xs text-gray-500">
-                  Belum ada paket bimbel yang tersedia. Silakan hubungi admin.
+                  Belum ada paket bimbel yang tersedia. Silakan tambahkan lewat menu admin.
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -110,7 +110,7 @@ export default function HalamanPembayaran() {
                         <p className="text-xs text-gray-500">{p.shortDesc || '-'}</p>
                       </div>
                       <span className="text-sm font-black text-emerald-600">
-                        Rp {(p.price || 0).toLocaleString('id-ID')}
+                        Rp {(Number(p.price) || 0).toLocaleString('id-ID')}
                       </span>
                     </label>
                   ))}
@@ -147,7 +147,7 @@ export default function HalamanPembayaran() {
               disabled={loading || daftarPaket.length === 0}
               className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shadow-sm mt-4 disabled:opacity-50"
             >
-              {loading ? 'Membuat QRIS...' : `Bayar Rp ${(paketPilihan?.price || 0).toLocaleString('id-ID')} via QRIS`}
+              {loading ? 'Membuat QRIS...' : `Bayar Rp ${(Number(paketPilihan?.price) || 0).toLocaleString('id-ID')} via QRIS`}
             </button>
           </form>
         ) : (
@@ -174,7 +174,7 @@ export default function HalamanPembayaran() {
             </div>
 
             <p className="text-xs text-gray-500 mb-4">
-              Scan via BCA Mobile, Mandiri, BRI, GoPay, OVO, Dana, atau ShopeePay. Nominal otomatis terisi Rp {Number(hasilQRIS.amount).toLocaleString('id-ID')}.
+              Scan via BCA Mobile, Mandiri, BRI, GoPay, OVO, Dana, atau ShopeePay.
             </p>
 
             <div className="space-y-2">
