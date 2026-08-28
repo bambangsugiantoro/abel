@@ -10,7 +10,6 @@ export default function AdminPaketPage() {
   const [programs, setPrograms] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Form State
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState('');
   const [title, setTitle] = useState('');
@@ -32,12 +31,10 @@ export default function AdminPaketPage() {
   const fetchPrograms = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/programs');
+      const res = await fetch('/api/admin/paket');
       const data = await res.json();
       if (Array.isArray(data)) {
         setPrograms(data);
-      } else if (data && Array.isArray(data.programs)) {
-        setPrograms(data.programs);
       }
     } catch (err) {
       console.error(err);
@@ -61,14 +58,14 @@ export default function AdminPaketPage() {
       ? { id: currentId, title, price: Number(price), shortDesc }
       : { title, price: Number(price), shortDesc };
 
-    const res = await fetch('/api/admin/programs', {
+    const res = await fetch('/api/admin/paket', {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
     const data = await res.json();
-    if (res.ok) {
+    if (res.ok && data.success) {
       alert(isEditing ? 'Paket berhasil diubah!' : 'Paket baru berhasil ditambahkan!');
       resetForm();
       fetchPrograms();
@@ -88,7 +85,7 @@ export default function AdminPaketPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus paket ini? Siswa tidak akan bisa memilih paket ini lagi.')) return;
-    const res = await fetch(`/api/admin/programs?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/admin/paket?id=${id}`, { method: 'DELETE' });
     if (res.ok) {
       fetchPrograms();
     } else {
@@ -142,7 +139,6 @@ export default function AdminPaketPage() {
           </button>
         </div>
 
-        {/* FORM TAMBAH / EDIT */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
           <h2 className="text-base font-bold text-gray-800 mb-4">
             {isEditing ? '✏️ Edit Paket' : '➕ Tambah Paket Bimbel Baru'}
@@ -154,7 +150,7 @@ export default function AdminPaketPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: Privat Bahasa Inggris (5 Bulan)"
+                  placeholder="Contoh: Paket Konsultasi Belajar"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="mt-1 w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:border-emerald-500"
@@ -165,7 +161,7 @@ export default function AdminPaketPage() {
                 <input
                   type="number"
                   required
-                  placeholder="Contoh: 1000000"
+                  placeholder="Contoh: 10000"
                   value={price}
                   onChange={(e) => setPrice(Number(e.target.value))}
                   className="mt-1 w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:border-emerald-500"
@@ -177,7 +173,7 @@ export default function AdminPaketPage() {
               <label className="text-xs font-bold text-gray-700">Keterangan / Benefit Singkat</label>
               <textarea
                 rows={2}
-                placeholder="Contoh: Program intensif privat 5 bulan tatap muka & modul gratis..."
+                placeholder="Contoh: Bimbingan tatap muka, konsultasi PR, latihan soal..."
                 value={shortDesc}
                 onChange={(e) => setShortDesc(e.target.value)}
                 className="mt-1 w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:border-emerald-500"
@@ -204,7 +200,6 @@ export default function AdminPaketPage() {
           </form>
         </div>
 
-        {/* TABEL LIST PAKET */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-100 flex justify-between items-center">
             <h3 className="font-bold text-gray-800 text-sm">Daftar Paket Aktif</h3>
