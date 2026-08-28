@@ -61,8 +61,8 @@ export function CertificateSheet({
         </header>
 
         <main className="flex flex-1 flex-col items-center justify-center text-center">
-          <p className="font-serif text-xl italic text-emerald-800">
-            Dengan bangga mempersembahkan
+          <p className="font-serif text-2xl font-extrabold italic text-emerald-800">
+            Penghargaan diberikan kepada:
           </p>
 
           <h2 className="mt-5 border-b-2 border-emerald-600 px-10 pb-3 font-serif text-5xl font-bold text-slate-950">
