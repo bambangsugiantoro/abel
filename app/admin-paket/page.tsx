@@ -10,14 +10,13 @@ export default function AdminPaketPage() {
   const [programs, setPrograms] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // State Form
+  // Form State
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState('');
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState<number | ''>('');
   const [shortDesc, setShortDesc] = useState('');
 
-  // Password admin
   const ADMIN_PASS = 'AyoBelajar2026';
 
   const handleLogin = (e: React.FormEvent) => {
@@ -33,9 +32,13 @@ export default function AdminPaketPage() {
   const fetchPrograms = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/paket');
+      const res = await fetch('/api/admin/programs');
       const data = await res.json();
-      if (Array.isArray(data)) setPrograms(data);
+      if (Array.isArray(data)) {
+        setPrograms(data);
+      } else if (data && Array.isArray(data.programs)) {
+        setPrograms(data.programs);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -55,42 +58,41 @@ export default function AdminPaketPage() {
     e.preventDefault();
     const method = isEditing ? 'PUT' : 'POST';
     const body = isEditing 
-      ? { id: currentId, title, price, shortDesc }
-      : { title, price, shortDesc };
+      ? { id: currentId, title, price: Number(price), shortDesc }
+      : { title, price: Number(price), shortDesc };
 
-    const res = await fetch('/api/admin/paket', {
+    const res = await fetch('/api/admin/programs', {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
     const data = await res.json();
-    if (data.success) {
+    if (res.ok) {
       alert(isEditing ? 'Paket berhasil diubah!' : 'Paket baru berhasil ditambahkan!');
       resetForm();
       fetchPrograms();
     } else {
-      alert(data.error || 'Gagal menyimpan');
+      alert(data.error || 'Gagal menyimpan paket');
     }
   };
 
   const handleEdit = (prog: any) => {
     setIsEditing(true);
     setCurrentId(prog.id);
-    setTitle(prog.title);
-    setPrice(prog.price);
+    setTitle(prog.title || '');
+    setPrice(prog.price || 0);
     setShortDesc(prog.shortDesc || '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus paket ini? Siswa tidak akan bisa memilih paket ini lagi.')) return;
-    const res = await fetch(`/api/admin/paket?id=${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) {
+    const res = await fetch(`/api/admin/programs?id=${id}`, { method: 'DELETE' });
+    if (res.ok) {
       fetchPrograms();
     } else {
-      alert(data.error || 'Gagal menghapus paket');
+      alert('Gagal menghapus paket');
     }
   };
 
@@ -130,7 +132,7 @@ export default function AdminPaketPage() {
         <div className="flex justify-between items-center bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
           <div>
             <h1 className="text-xl font-black text-gray-800">Pengelola Paket Bimbel</h1>
-            <p className="text-xs text-gray-500">Tambah, ubah tarif harga, atau hapus paket belajar</p>
+            <p className="text-xs text-gray-500">Tambah, ubah harga, atau hapus paket bimbel</p>
           </div>
           <button
             onClick={() => setIsAuth(false)}
@@ -140,7 +142,7 @@ export default function AdminPaketPage() {
           </button>
         </div>
 
-        {/* FORM INPUT / EDIT */}
+        {/* FORM TAMBAH / EDIT */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
           <h2 className="text-base font-bold text-gray-800 mb-4">
             {isEditing ? '✏️ Edit Paket' : '➕ Tambah Paket Bimbel Baru'}
@@ -172,10 +174,10 @@ export default function AdminPaketPage() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-gray-700">Keterangan / Benefit</label>
+              <label className="text-xs font-bold text-gray-700">Keterangan / Benefit Singkat</label>
               <textarea
                 rows={2}
-                placeholder="Contoh: Program intensif bimbingan tatap muka, modul gratis..."
+                placeholder="Contoh: Program intensif privat 5 bulan tatap muka & modul gratis..."
                 value={shortDesc}
                 onChange={(e) => setShortDesc(e.target.value)}
                 className="mt-1 w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:border-emerald-500"
@@ -205,7 +207,7 @@ export default function AdminPaketPage() {
         {/* TABEL LIST PAKET */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-            <h3 className="font-bold text-gray-800 text-sm">Daftar Paket Terbit</h3>
+            <h3 className="font-bold text-gray-800 text-sm">Daftar Paket Aktif</h3>
             <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
               {programs.length} Paket
             </span>
@@ -226,7 +228,7 @@ export default function AdminPaketPage() {
                   <tr key={p.id} className="hover:bg-gray-50">
                     <td className="p-4 font-bold text-gray-800">{p.title}</td>
                     <td className="p-4 font-black text-emerald-600">
-                      Rp {(p.price || 0).toLocaleString('id-ID')}
+                      Rp {(Number(p.price) || 0).toLocaleString('id-ID')}
                     </td>
                     <td className="p-4 text-gray-500 text-xs max-w-xs truncate">{p.shortDesc || '-'}</td>
                     <td className="p-4 text-center space-x-2">
@@ -248,7 +250,7 @@ export default function AdminPaketPage() {
                 {programs.length === 0 && !loading && (
                   <tr>
                     <td colSpan={4} className="text-center p-8 text-gray-400 text-xs">
-                      Belum ada paket yang tersimpan di database. Silakan tambahkan lewat form di atas.
+                      Belum ada paket bimbel yang ditambahkan.
                     </td>
                   </tr>
                 )}
