@@ -14,7 +14,7 @@ export default function HalamanPembayaran() {
   useEffect(() => {
     async function loadPaket() {
       try {
-        const res = await fetch('/api/admin/programs');
+        const res = await fetch('/api/admin/paket');
         const data = await res.json();
         const list = Array.isArray(data) ? data : data?.programs || [];
         if (list.length > 0) {
