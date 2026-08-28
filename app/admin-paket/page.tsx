@@ -86,7 +86,8 @@ export default function AdminPaketPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus paket ini? Siswa tidak akan bisa memilih paket ini lagi.')) return;
     const res = await fetch(`/api/admin/paket?id=${id}`, { method: 'DELETE' });
-    if (res.ok) {
+    const data = await res.json();
+    if (res.ok && data.success) {
       fetchPrograms();
     } else {
       alert('Gagal menghapus paket');
@@ -173,7 +174,7 @@ export default function AdminPaketPage() {
               <label className="text-xs font-bold text-gray-700">Keterangan / Benefit Singkat</label>
               <textarea
                 rows={2}
-                placeholder="Contoh: Bimbingan tatap muka, konsultasi PR, latihan soal..."
+                placeholder="Contoh: Bimbingan tatap muka, materi modul lengkap..."
                 value={shortDesc}
                 onChange={(e) => setShortDesc(e.target.value)}
                 className="mt-1 w-full p-2.5 border rounded-lg text-sm focus:outline-none focus:border-emerald-500"
