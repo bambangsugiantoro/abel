@@ -21,7 +21,7 @@ function getCheckoutUrl(response: any): string {
   return url;
 }
 
-export default function HalamanKasirMewah() {
+export default function HalamanKasirUniversal() {
   const [daftarPaket, setDaftarPaket] = useState<any[]>([]);
   const [paketPilihan, setPaketPilihan] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
@@ -59,7 +59,7 @@ export default function HalamanKasirMewah() {
 
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paketPilihan) return alert('Silakan pilih program terlebih dahulu');
+    if (!paketPilihan) return alert('Silakan pilih salah satu item/layanan terlebih dahulu');
 
     setLoading(true);
     try {
@@ -67,7 +67,7 @@ export default function HalamanKasirMewah() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nama: 'Customer Premium',
+          nama: 'Pelanggan POS',
           whatsapp: '08123456789',
           paket: paketPilihan.title,
           nominal: Number(paketPilihan.price),
@@ -80,7 +80,7 @@ export default function HalamanKasirMewah() {
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
-        alert(data.error || 'Gagal membuat QRIS');
+        alert(data.error || 'Gagal membuat tagihan QRIS');
         setLoading(false);
       }
     } catch {
@@ -91,7 +91,7 @@ export default function HalamanKasirMewah() {
 
   const handleTambahPaket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle || !newPrice) return alert('Nama dan nominal biaya wajib diisi');
+    if (!newTitle || !newPrice) return alert('Nama dan nominal harga wajib diisi');
 
     setSaving(true);
     try {
@@ -108,7 +108,7 @@ export default function HalamanKasirMewah() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        alert('Program berhasil ditambahkan!');
+        alert('Item / Layanan berhasil ditambahkan!');
         setNewTitle('');
         setNewPrice('');
         setNewDesc('');
@@ -124,7 +124,7 @@ export default function HalamanKasirMewah() {
   };
 
   const handleHapusPaket = async (id: string) => {
-    if (!confirm('Hapus program ini dari katalog?')) return;
+    if (!confirm('Hapus item ini dari katalog kasir?')) return;
     try {
       const res = await fetch(`/api/paket?id=${id}&adminKey=${passInput}`, { method: 'DELETE' });
       const data = await res.json();
@@ -142,40 +142,40 @@ export default function HalamanKasirMewah() {
     <div className="min-h-screen bg-slate-100/70 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-50/60 via-slate-50 to-emerald-50/40 text-slate-800 py-12 px-4 flex items-center justify-center font-sans antialiased selection:bg-amber-200">
       <div className="max-w-md w-full space-y-5">
         
-        {/* KARTU UTAMA MEWAH (CERAH) */}
+        {/* KARTU UTAMA KASIR / CHECKOUT POS */}
         <div className="bg-white/95 backdrop-blur-2xl border border-white/80 rounded-3xl p-7 sm:p-8 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.08),0_1px_3px_rgba(0,0,0,0.05)] relative overflow-hidden ring-1 ring-slate-900/5">
-          {/* Aksen Kilau Mewah di Atas */}
+          {/* Aksen Kilau */}
           <div className="absolute -top-20 -right-20 w-44 h-44 bg-gradient-to-br from-amber-300/25 to-emerald-300/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-20 -left-20 w-44 h-44 bg-gradient-to-tr from-emerald-300/20 to-teal-300/15 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Header */}
+          {/* Header Universal */}
           <div className="text-center mb-7 relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-[11px] font-bold uppercase tracking-widest mb-3 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Sistem Pembayaran Instan
             </div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">Checkout QRIS</h1>
-            <p className="text-xs text-slate-500 mt-1 font-medium">Pilih program pelatihan & selesaikan transaksi resmi</p>
+            <p className="text-xs text-slate-500 mt-1 font-medium">Pilih item pembayaran & selesaikan transaksi</p>
           </div>
 
           <form onSubmit={handleBuatQRIS} className="space-y-6 relative z-10">
             <div>
               <div className="flex justify-between items-center mb-3">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">PILIH PROGRAM TERSEDIA</span>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">DAFTAR ITEM / LAYANAN</span>
                 <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                  {daftarPaket.length} Program
+                  {daftarPaket.length} Item
                 </span>
               </div>
 
               {loadingData ? (
                 <div className="p-8 border border-slate-200 bg-slate-50/50 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-500">
                   <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-xs font-semibold">Memuat katalog resmi...</span>
+                  <span className="text-xs font-semibold">Memuat katalog...</span>
                 </div>
               ) : daftarPaket.length === 0 ? (
                 <div className="p-8 border border-dashed border-slate-300 bg-slate-50 rounded-2xl text-center">
-                  <p className="text-xs font-semibold text-slate-600">Belum ada program aktif.</p>
-                  <p className="text-[11px] text-slate-400 mt-1">Buka panel pengelola di bawah untuk menambah paket.</p>
+                  <p className="text-xs font-semibold text-slate-600">Belum ada item / produk aktif.</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Buka menu kelola di bawah untuk menambahkan item.</p>
                 </div>
               ) : (
                 <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
@@ -197,7 +197,7 @@ export default function HalamanKasirMewah() {
                           </p>
                           <div className="flex items-center gap-1.5">
                             <span className="text-[10px] uppercase font-bold tracking-wide text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                              {p.shortDesc || 'Reguler'}
+                              {p.shortDesc || 'Umum'}
                             </span>
                           </div>
                         </div>
@@ -213,19 +213,19 @@ export default function HalamanKasirMewah() {
               )}
             </div>
 
-            {/* Ringkasan Biaya Mewah */}
+            {/* Ringkasan Pembayaran */}
             {paketPilihan && (
               <div className="p-4 bg-slate-50/80 border border-slate-200/80 rounded-2xl space-y-2 shadow-inner">
                 <div className="flex justify-between text-xs text-slate-500 font-medium">
-                  <span>Program</span>
+                  <span>Item Pilihan</span>
                   <span className="font-bold text-slate-800 truncate max-w-[65%] text-right">{paketPilihan.title}</span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-500 font-medium">
-                  <span>Metode Transaksi</span>
-                  <span className="font-bold text-slate-800">QRIS Dinamis (Otomatis)</span>
+                  <span>Metode Pembayaran</span>
+                  <span className="font-bold text-slate-800">QRIS Dinamis</span>
                 </div>
                 <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline">
-                  <span className="text-xs font-black text-slate-600 uppercase tracking-wider">Total Pembayaran</span>
+                  <span className="text-xs font-black text-slate-600 uppercase tracking-wider">Total Tagihan</span>
                   <span className="text-2xl font-black text-emerald-700 tracking-tight">
                     Rp {(Number(paketPilihan.price) || 0).toLocaleString('id-ID')}
                   </span>
@@ -233,7 +233,6 @@ export default function HalamanKasirMewah() {
               </div>
             )}
 
-            {/* Tombol Eksekutif Emas/Zamrud */}
             <button
               type="submit"
               disabled={loading || daftarPaket.length === 0}
@@ -257,11 +256,11 @@ export default function HalamanKasirMewah() {
             onClick={() => setShowAdmin(!showAdmin)}
             className="text-xs text-slate-400 hover:text-slate-700 font-bold transition"
           >
-            {showAdmin ? '✕ Tutup Pengelola' : '⚙️ Kelola Katalog Program (Admin)'}
+            {showAdmin ? '✕ Tutup Pengelola' : '⚙️ Kelola Katalog & Produk (Admin)'}
           </button>
         </div>
 
-        {/* MODAL / PANEL ADMIN (CERAH) */}
+        {/* MODAL / PANEL ADMIN */}
         {showAdmin && (
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl relative z-10">
             {!isAdminAuth ? (
@@ -289,37 +288,37 @@ export default function HalamanKasirMewah() {
             ) : (
               <div className="space-y-4">
                 <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-emerald-700">➕ Tambah Program Baru</h3>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-emerald-700">➕ Tambah Item / Layanan Baru</h3>
                 </div>
 
                 <form onSubmit={handleTambahPaket} className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600">Nama Program / Pelatihan</label>
+                    <label className="text-[11px] font-bold text-slate-600">Nama Produk / Item / Layanan</label>
                     <input
                       type="text"
                       required
-                      placeholder="Contoh: PELATIHAN PENGEMBANG WEB PRATAMA"
+                      placeholder="Contoh: Paket Produk A / Layanan Jasa / Pelatihan"
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600">Biaya / Harga (Rp)</label>
+                    <label className="text-[11px] font-bold text-slate-600">Harga / Nominal (Rp)</label>
                     <input
                       type="number"
                       required
-                      placeholder="Contoh: 3000000"
+                      placeholder="Contoh: 150000"
                       value={newPrice}
                       onChange={(e) => setNewPrice(Number(e.target.value))}
                       className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600">Keterangan / Durasi</label>
+                    <label className="text-[11px] font-bold text-slate-600">Keterangan Singkat</label>
                     <input
                       type="text"
-                      placeholder="Contoh: 2 HARI"
+                      placeholder="Contoh: Unit / Paket / Sesi"
                       value={newDesc}
                       onChange={(e) => setNewDesc(e.target.value)}
                       className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
@@ -335,7 +334,7 @@ export default function HalamanKasirMewah() {
                 </form>
 
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-600 pt-3 border-t border-slate-100">
-                  Katalog Aktif
+                  Daftar Item Aktif
                 </h3>
                 <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
                   {daftarPaket.map((p) => (
