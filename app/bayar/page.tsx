@@ -1,23 +1,31 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// Sound Engine: Bell Chime + Voice Assistant
+let globalAudioCtx: any = null;
+
+function getAudioContext() {
+  if (typeof window === 'undefined') return null;
+  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+  if (!globalAudioCtx && AudioCtx) {
+    globalAudioCtx = new AudioCtx();
+  }
+  if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+    globalAudioCtx.resume();
+  }
+  return globalAudioCtx;
+}
+
 function playSuccessSound(customText?: string) {
   try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (AudioCtx) {
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
-
+    const ctx = getAudioContext();
+    if (ctx) {
       const playTone = (freq: number, start: number, duration: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        gain.gain.setValueAtTime(0.35, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + start);
         gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + duration);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -25,7 +33,6 @@ function playSuccessSound(customText?: string) {
         osc.stop(ctx.currentTime + start + duration);
       };
 
-      // Nada Bell Chime Kasir (C5 - E5 - G5 - C6)
       playTone(523.25, 0.0, 0.35);
       playTone(659.25, 0.12, 0.35);
       playTone(783.99, 0.24, 0.4);
@@ -35,7 +42,6 @@ function playSuccessSound(customText?: string) {
     console.error('Audio synthesizer error:', e);
   }
 
-  // Voice Assistant Bahasa Indonesia
   setTimeout(() => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -46,23 +52,21 @@ function playSuccessSound(customText?: string) {
       utterance.pitch = 1.05;
       window.speechSynthesis.speak(utterance);
     }
-  }, 500);
+  }, 450);
 }
 
-export default function TerminalKasirLiveAutoSound() {
+export default function TerminalKasirAutoSound() {
   const [daftarPaket, setDaftarPaket] = useState<any[]>([]);
   const [paketPilihan, setPaketPilihan] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>('');
 
-  // State Modal QRIS & Polling
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState('');
   const [activeTrxData, setActiveTrxData] = useState<{ title: string; price: number; trxId?: string } | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
 
-  // Admin Controls
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [passInput, setPassInput] = useState('');
@@ -71,7 +75,14 @@ export default function TerminalKasirLiveAutoSound() {
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Jam Realtime
+  useEffect(() => {
+    const handleFirstClick = () => {
+      getAudioContext();
+    };
+    window.addEventListener('click', handleFirstClick, { once: true });
+    return () => window.removeEventListener('click', handleFirstClick);
+  }, []);
+
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
@@ -109,17 +120,15 @@ export default function TerminalKasirLiveAutoSound() {
     loadPaket();
   }, []);
 
-  // Background Polling Checker: Cek status bayar otomatis ke gateway tiap 2.5 detik
   useEffect(() => {
     let timer: any;
-    if (showQrisModal && paymentStatus === 'PENDING') {
+    if (showQrisModal && paymentStatus === 'PENDING' && activeTrxData?.trxId) {
       timer = setInterval(async () => {
         try {
-          if (!activeTrxData?.trxId) return;
           const checkRes = await fetch(`/api/bayar-qris?trxId=${activeTrxData.trxId}`, { cache: 'no-store' });
           if (checkRes.ok) {
             const checkData = await checkRes.json();
-            if (checkData.status === 'PAID' || checkData.status === 'SUCCESS' || checkData.paid) {
+            if (checkData.status === 'PAID' || checkData.paid) {
               setPaymentStatus('SUCCESS');
               playSuccessSound(`Pembayaran ${activeTrxData.title} sebesar ${activeTrxData.price.toLocaleString('id-ID')} rupiah berhasil diterima.`);
               setTimeout(() => {
@@ -129,7 +138,7 @@ export default function TerminalKasirLiveAutoSound() {
             }
           }
         } catch (e) {
-          // ignore polling error
+          // ignore error
         }
       }, 2500);
     }
@@ -142,13 +151,7 @@ export default function TerminalKasirLiveAutoSound() {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
 
-    // Unmute Web Audio context
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (AudioCtx) {
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') ctx.resume();
-    }
-
+    getAudioContext();
     setLoading(true);
     try {
       const res = await fetch('/api/bayar-qris', {
@@ -165,7 +168,7 @@ export default function TerminalKasirLiveAutoSound() {
       const data = await res.json();
 
       let foundUrl = '';
-      let foundTrxId = data?.id || data?.transactionId || data?.order_id || '';
+      let foundTrxId = data?.id || data?.transactionId || data?.order_id || data?.data?.id || '';
 
       const search = (item: any) => {
         if (!item) return;
@@ -250,10 +253,8 @@ export default function TerminalKasirLiveAutoSound() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-50/50 via-slate-50 to-emerald-50/40 text-slate-800 py-10 px-4 flex items-center justify-center font-sans antialiased selection:bg-emerald-200">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/90 to-amber-50/40 text-slate-800 py-10 px-4 flex items-center justify-center font-sans antialiased selection:bg-emerald-200">
       <div className="max-w-md w-full space-y-4">
-        
-        {/* TOP STATUS BAR */}
         <div className="flex justify-between items-center px-4 py-2 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl text-[11px] text-slate-600 font-mono tracking-tight shadow-sm">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
@@ -262,13 +263,10 @@ export default function TerminalKasirLiveAutoSound() {
           <div className="font-semibold text-slate-500">{currentTime || '00:00:00 WIB'}</div>
         </div>
 
-        {/* CONTAINER UTAMA POS */}
         <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_-12px_rgba(15,23,42,0.08)] relative overflow-hidden ring-1 ring-slate-900/5">
-          
           <div className="absolute top-0 right-0 w-48 h-48 bg-amber-200/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-200/20 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Header */}
           <div className="text-center pb-6 border-b border-slate-100 relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold uppercase tracking-widest mb-2.5 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -329,7 +327,6 @@ export default function TerminalKasirLiveAutoSound() {
               )}
             </div>
 
-            {/* Total Tagihan */}
             {paketPilihan && (
               <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2">
                 <div className="flex justify-between text-xs text-slate-500 font-medium">
@@ -345,7 +342,6 @@ export default function TerminalKasirLiveAutoSound() {
               </div>
             )}
 
-            {/* Uji Suara */}
             <div className="flex justify-between items-center px-1">
               <button
                 type="button"
@@ -357,7 +353,6 @@ export default function TerminalKasirLiveAutoSound() {
               <span className="text-[10px] text-slate-400 font-mono">Auto Soundbox</span>
             </div>
 
-            {/* Tombol Tampilkan QRIS */}
             <button
               type="submit"
               disabled={loading || daftarPaket.length === 0}
@@ -375,11 +370,9 @@ export default function TerminalKasirLiveAutoSound() {
           </form>
         </div>
 
-        {/* MODAL POPUP QRIS (HANYA QRIS & STATUS SCAN) */}
         {showQrisModal && activeTrxData && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4 animate-in fade-in zoom-in duration-200">
-              
               {paymentStatus === 'PENDING' ? (
                 <>
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-widest animate-pulse">
@@ -393,7 +386,6 @@ export default function TerminalKasirLiveAutoSound() {
                     </p>
                   </div>
 
-                  {/* Frame Tampilan QRIS Langsung */}
                   <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center">
                     <iframe
                       src={checkoutUrl}
@@ -433,7 +425,6 @@ export default function TerminalKasirLiveAutoSound() {
           </div>
         )}
 
-        {/* ADMIN SECURITY TOGGLE */}
         <div className="text-center pt-1">
           <button
             onClick={() => setShowAdmin(!showAdmin)}
@@ -443,7 +434,6 @@ export default function TerminalKasirLiveAutoSound() {
           </button>
         </div>
 
-        {/* ADMIN CONTROL PANEL */}
         {showAdmin && (
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl relative z-10">
             {!isAdminAuth ? (
@@ -542,7 +532,6 @@ export default function TerminalKasirLiveAutoSound() {
             )}
           </div>
         )}
-
       </div>
     </div>
   );
