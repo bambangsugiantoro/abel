@@ -21,12 +21,10 @@ function getCheckoutUrl(response: any): string {
   return url;
 }
 
-export default function HalamanPembayaran() {
+export default function HalamanKasirModern() {
   const [daftarPaket, setDaftarPaket] = useState<any[]>([]);
   const [paketPilihan, setPaketPilihan] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
-  const [nama, setNama] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Panel Admin
@@ -45,6 +43,8 @@ export default function HalamanPembayaran() {
       if (Array.isArray(data) && data.length > 0) {
         setDaftarPaket(data);
         setPaketPilihan(data[0]);
+      } else {
+        setDaftarPaket([]);
       }
     } catch (e) {
       console.error(e);
@@ -59,7 +59,7 @@ export default function HalamanPembayaran() {
 
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paketPilihan) return alert('Silakan pilih paket terlebih dahulu');
+    if (!paketPilihan) return alert('Silakan pilih salah satu program terlebih dahulu');
 
     setLoading(true);
     try {
@@ -67,8 +67,8 @@ export default function HalamanPembayaran() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nama,
-          whatsapp,
+          nama: 'Pelanggan POS',
+          whatsapp: '08123456789',
           paket: paketPilihan.title,
           nominal: Number(paketPilihan.price),
         }),
@@ -84,14 +84,14 @@ export default function HalamanPembayaran() {
         setLoading(false);
       }
     } catch {
-      alert('Gagal terhubung ke server');
+      alert('Gagal terhubung ke gateway pembayaran');
       setLoading(false);
     }
   };
 
   const handleTambahPaket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle || !newPrice) return alert('Nama dan harga paket wajib diisi');
+    if (!newTitle || !newPrice) return alert('Nama dan nominal harga wajib diisi');
 
     setSaving(true);
     try {
@@ -108,13 +108,13 @@ export default function HalamanPembayaran() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        alert('Paket berhasil ditambahkan ke server!');
+        alert('Program berhasil ditambahkan!');
         setNewTitle('');
         setNewPrice('');
         setNewDesc('');
         loadPaket();
       } else {
-        alert(data.error || 'Gagal menambahkan paket');
+        alert(data.error || 'Gagal menambahkan');
       }
     } catch {
       alert('Gagal menghubungi server');
@@ -124,7 +124,7 @@ export default function HalamanPembayaran() {
   };
 
   const handleHapusPaket = async (id: string) => {
-    if (!confirm('Hapus paket ini?')) return;
+    if (!confirm('Hapus program ini dari daftar kasir?')) return;
     try {
       const res = await fetch(`/api/paket?id=${id}&adminKey=${passInput}`, { method: 'DELETE' });
       const data = await res.json();
@@ -139,179 +139,210 @@ export default function HalamanPembayaran() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-xl mx-auto space-y-4">
-        {/* TAMPILAN SISWA */}
-        <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-200">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-black text-gray-800">Pembayaran QRIS</h1>
-            <p className="text-sm text-gray-500 mt-1">Pilih program dan bayar instan via QRIS</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100 py-12 px-4 flex items-center justify-center font-sans">
+      <div className="max-w-lg w-full space-y-5">
+        
+        {/* KARTU UTAMA KASIR */}
+        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+          {/* Aksen Gradasi Visual Atas */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Header */}
+          <div className="text-center mb-7 relative z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Kasir Pembayaran Instan
+            </div>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">Checkout QRIS</h1>
+            <p className="text-xs text-slate-400 mt-1">Pilih program dan scan QRIS untuk menyelesaikan transaksi</p>
           </div>
 
-          <form onSubmit={handleBuatQRIS} className="space-y-4">
+          <form onSubmit={handleBuatQRIS} className="space-y-6 relative z-10">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-2">PILIH PROGRAM</label>
-              
+              <div className="flex justify-between items-center mb-2.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Daftar Pilihan Program</span>
+                <span className="text-[11px] text-slate-500">{daftarPaket.length} Program Tersedia</span>
+              </div>
+
               {loadingData ? (
-                <div className="p-6 text-center text-xs text-gray-400">Memuat paket...</div>
+                <div className="p-8 border border-slate-800/80 bg-slate-950/40 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-400">
+                  <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs">Memuat katalog...</span>
+                </div>
+              ) : daftarPaket.length === 0 ? (
+                <div className="p-8 border border-dashed border-slate-800 bg-slate-950/30 rounded-2xl text-center">
+                  <p className="text-xs text-slate-400">Katalog masih kosong.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Tambahkan item dari panel Admin di bawah.</p>
+                </div>
               ) : (
-                <div className="space-y-2">
-                  {daftarPaket.map((p) => (
-                    <label
-                      key={p.id}
-                      onClick={() => setPaketPilihan(p)}
-                      className={`flex justify-between items-center p-3.5 rounded-xl border-2 cursor-pointer transition ${
-                        paketPilihan?.id === p.id
-                          ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div>
-                        <p className="text-sm font-bold text-gray-800">{p.title}</p>
-                        <p className="text-xs text-gray-500">{p.shortDesc}</p>
+                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                  {daftarPaket.map((p) => {
+                    const isSelected = paketPilihan?.id === p.id;
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => setPaketPilihan(p)}
+                        className={`group relative p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-emerald-950/40 border-emerald-500/80 shadow-lg shadow-emerald-950/50 ring-1 ring-emerald-500/50'
+                            : 'bg-slate-950/40 border-slate-800/80 hover:border-slate-700 hover:bg-slate-950/70'
+                        }`}
+                      >
+                        <div className="space-y-0.5 max-w-[70%]">
+                          <p className={`text-sm font-semibold transition ${isSelected ? 'text-emerald-300' : 'text-slate-200'}`}>
+                            {p.title}
+                          </p>
+                          <p className="text-xs text-slate-400 truncate">{p.shortDesc || '-'}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-sm font-black ${isSelected ? 'text-emerald-400' : 'text-slate-100'}`}>
+                            Rp {(Number(p.price) || 0).toLocaleString('id-ID')}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-sm font-black text-emerald-600">
-                        Rp {(Number(p.price) || 0).toLocaleString('id-ID')}
-                      </span>
-                    </label>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            <div className="pt-2 border-t border-gray-100">
-              <label className="block text-xs font-bold text-gray-700 mb-1">Nama Siswa</label>
-              <input
-                type="text"
-                required
-                placeholder="Contoh: Alisa"
-                value={nama}
-                onChange={(e) => setNama(e.target.value)}
-                className="w-full p-2.5 border rounded-lg text-sm focus:border-emerald-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">No. WhatsApp</label>
-              <input
-                type="tel"
-                required
-                placeholder="Contoh: 08123456789"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                className="w-full p-2.5 border rounded-lg text-sm focus:border-emerald-500 focus:outline-none"
-              />
-            </div>
+            {/* Kotak Ringkasan Transaksi */}
+            {paketPilihan && (
+              <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl space-y-2">
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>Item Pilihan</span>
+                  <span className="font-semibold text-slate-200 truncate max-w-[60%] text-right">{paketPilihan.title}</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>Metode</span>
+                  <span className="font-semibold text-slate-200">QRIS All Payment</span>
+                </div>
+                <div className="pt-2 border-t border-slate-800/60 flex justify-between items-baseline">
+                  <span className="text-xs font-bold text-slate-300 uppercase">Total Tagihan</span>
+                  <span className="text-xl font-black text-emerald-400">
+                    Rp {(Number(paketPilihan.price) || 0).toLocaleString('id-ID')}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={loading || daftarPaket.length === 0}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shadow-sm mt-4 disabled:opacity-50"
+              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:scale-[0.99] text-slate-950 font-black rounded-2xl shadow-xl shadow-emerald-500/20 transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm tracking-wide uppercase"
             >
-              {loading
-                ? 'Membuka QRIS Resmi...'
-                : `Lanjut Bayar Rp ${(Number(paketPilihan?.price) || 0).toLocaleString('id-ID')} via QRIS`}
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                  <span>Memproses QRIS...</span>
+                </>
+              ) : (
+                <span>Buka QRIS Sekarang ⚡</span>
+              )}
             </button>
           </form>
         </div>
 
-        {/* TOGGLE ADMIN */}
+        {/* ADMIN TOGGLE LINK */}
         <div className="text-center">
           <button
             onClick={() => setShowAdmin(!showAdmin)}
-            className="text-xs text-gray-400 hover:text-gray-600 underline font-medium"
+            className="text-xs text-slate-400 hover:text-slate-200 font-medium transition"
           >
-            {showAdmin ? 'Tutup Pengelola Paket' : '⚙️ Kelola Program (Admin)'}
+            {showAdmin ? '✕ Tutup Panel Pengelola' : '⚙️ Kelola Katalog Program (Admin)'}
           </button>
         </div>
 
-        {/* PANEL KHUSUS ADMIN */}
+        {/* MODAL / PANEL ADMIN */}
         {showAdmin && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+          <div className="bg-slate-900/95 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur-xl">
             {!isAdminAuth ? (
               <div className="space-y-3">
-                <h3 className="text-sm font-bold text-gray-800">Login Admin</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Verifikasi Sandi Admin</h3>
                 <div className="flex gap-2">
                   <input
                     type="password"
-                    placeholder="Masukkan Password Admin"
+                    placeholder="Masukkan sandi..."
                     value={passInput}
                     onChange={(e) => setPassInput(e.target.value)}
-                    className="flex-1 p-2 border rounded-lg text-xs focus:outline-none"
+                    className="flex-1 px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/60"
                   />
                   <button
                     onClick={() => {
                       if (passInput === 'abelcawangununganbejen') setIsAdminAuth(true);
-                      else alert('Password admin salah!');
+                      else alert('Sandi admin salah!');
                     }}
-                    className="px-4 py-2 bg-gray-800 text-white rounded-lg text-xs font-bold"
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition"
                   >
-                    Masuk
+                    Buka
                   </button>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <h3 className="text-sm font-bold text-gray-800">➕ Tambah Program (Server Pusat)</h3>
+                <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">➕ Tambah Program Baru</h3>
                 </div>
 
                 <form onSubmit={handleTambahPaket} className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-gray-600">Nama Paket</label>
+                    <label className="text-[11px] font-semibold text-slate-400">Nama Program / Layanan</label>
                     <input
                       type="text"
                       required
-                      placeholder="Contoh: Paket Les Privat Bahasa Inggris 1 Tahun"
+                      placeholder="Contoh: PELATIHAN DATA CENTER"
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
-                      className="w-full p-2 border rounded-lg text-xs focus:outline-none"
+                      className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-gray-600">Harga (Rp)</label>
+                    <label className="text-[11px] font-semibold text-slate-400">Harga (Rp)</label>
                     <input
                       type="number"
                       required
-                      placeholder="Contoh: 5000000"
+                      placeholder="Contoh: 6000000"
                       value={newPrice}
                       onChange={(e) => setNewPrice(Number(e.target.value))}
-                      className="w-full p-2 border rounded-lg text-xs focus:outline-none"
+                      className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-gray-600">Keterangan Singkat</label>
+                    <label className="text-[11px] font-semibold text-slate-400">Keterangan Durasi / Modul</label>
                     <input
                       type="text"
-                      placeholder="Contoh: Tatap muka 1x per minggu"
+                      placeholder="Contoh: 2 Hari Pelatihan"
                       value={newDesc}
                       onChange={(e) => setNewDesc(e.target.value)}
-                      className="w-full p-2 border rounded-lg text-xs focus:outline-none"
+                      className="w-full mt-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="w-full py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-50"
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition disabled:opacity-50"
                   >
-                    {saving ? 'Menyimpan ke Server...' : 'Simpan'}
+                    {saving ? 'Menyimpan...' : 'Simpan & Publikasikan'}
                   </button>
                 </form>
 
-                <h3 className="text-sm font-bold text-gray-800 border-b pt-3 pb-2">Daftar Paket Aktif</h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 pt-3 border-t border-slate-800">
+                  Daftar Program Aktif
+                </h3>
+                <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
                   {daftarPaket.map((p) => (
                     <div
                       key={p.id}
-                      className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg text-xs border"
+                      className="flex justify-between items-center p-2.5 bg-slate-950/70 border border-slate-800/80 rounded-xl text-xs"
                     >
-                      <div>
-                        <p className="font-bold text-gray-800">{p.title}</p>
-                        <p className="text-emerald-600 font-bold">Rp {(Number(p.price) || 0).toLocaleString('id-ID')}</p>
+                      <div className="max-w-[70%]">
+                        <p className="font-semibold text-slate-200 truncate">{p.title}</p>
+                        <p className="text-emerald-400 font-bold">Rp {(Number(p.price) || 0).toLocaleString('id-ID')}</p>
                       </div>
                       <button
                         onClick={() => handleHapusPaket(p.id)}
-                        className="px-2.5 py-1 bg-red-100 text-red-600 font-bold rounded hover:bg-red-200 text-[10px]"
+                        className="px-2.5 py-1 bg-red-900/40 hover:bg-red-900/60 text-red-300 font-semibold rounded-lg text-[10px] transition border border-red-800/50"
                       >
                         Hapus
                       </button>
@@ -322,6 +353,7 @@ export default function HalamanPembayaran() {
             )}
           </div>
         )}
+
       </div>
     </div>
   );
