@@ -1,85 +1,100 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-// Tempat penyimpanan data paket di memori server
-let globalPaketList = [
-  {
-    id: 'p1',
-    title: 'Paket Konsultasi Belajar',
-    price: 10000,
-    shortDesc: 'Sesi konsultasi belajar dan tanya jawab materi',
-  },
-  {
-    id: 'p2',
-    title: 'Bimbel Reguler SD (Bulanan)',
-    price: 350000,
-    shortDesc: 'Bimbingan belajar tatap muka 3x seminggu + modul',
-  },
-  {
-    id: 'p3',
-    title: 'Bimbel Reguler SMP (Bulanan)',
-    price: 450000,
-    shortDesc: 'Pendampingan materi sekolah + persiapan ujian',
-  },
-  {
-    id: 'p4',
-    title: 'Bimbel Intensif SMA / UTBK',
-    price: 650000,
-    shortDesc: 'Fokus TPS, Literasi, dan Penalaran Matematika',
-  },
-];
+const ADMIN_SECRET = 'abelcawangununganbejen';
 
-// GET: Ambil paket oleh siswa di semua komputer/HP
+// 1. GET: Ambil paket langsung dari Database Supabase/PostgreSQL
 export async function GET() {
-  return NextResponse.json(globalPaketList);
+  try {
+    const list = await (prisma as any).program.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Jika database kosong, beri default awal
+    if (!list || list.length === 0) {
+      return NextResponse.json([
+        {
+          id: 'default-1',
+          title: 'Paket Konsultasi Belajar',
+          price: 10000,
+          shortDesc: 'Sesi konsultasi belajar dan tanya jawab materi',
+        },
+      ]);
+    }
+
+    return NextResponse.json(list);
+  } catch (e: any) {
+    console.error(e);
+    return NextResponse.json([
+      {
+        id: 'default-1',
+        title: 'Paket Konsultasi Belajar',
+        price: 10000,
+        shortDesc: 'Sesi konsultasi belajar dan tanya jawab materi',
+      },
+    ]);
+  }
 }
 
-// POST: Admin menambah paket dari web
+// 2. POST: Tambah paket PERMANEN ke Database
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { title, price, shortDesc, adminKey } = body;
 
-    // Proteksi hanya admin yang tahu key ini
-    if (adminKey !== 'abelcawangununganbejen') {
+    if (adminKey !== ADMIN_SECRET) {
       return NextResponse.json({ error: 'Akses ditolak: Password admin salah' }, { status: 401 });
     }
 
     if (!title || !price) {
-      return NextResponse.json({ error: 'Nama dan harga wajib diisi' }, { status: 400 });
+      return NextResponse.json({ error: 'Nama dan harga paket wajib diisi' }, { status: 400 });
     }
 
-    const itemBaru = {
-      id: `p-${Date.now()}`,
-      title: String(title),
-      price: Number(price),
-      shortDesc: shortDesc ? String(shortDesc) : 'Program Bimbel Ayo Belajar',
-    };
+    const slug = `${String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now().toString().slice(-4)}`;
 
-    globalPaketList = [itemBaru, ...globalPaketList];
+    const created = await (prisma as any).program.create({
+      data: {
+        title: String(title),
+        slug,
+        level: 'Umum',
+        category: 'Bimbel',
+        price: Number(price) || 0,
+        shortDesc: shortDesc ? String(shortDesc) : 'Program Bimbel',
+        description: shortDesc ? String(shortDesc) : String(title),
+        features: JSON.stringify(['Materi Lengkap', 'Tutor Berpengalaman']),
+        isFeatured: true,
+      },
+    });
 
-    return NextResponse.json({ success: true, data: globalPaketList });
+    return NextResponse.json({ success: true, data: created });
   } catch (err: any) {
-    return NextResponse.json({ error: 'Gagal menambah paket' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Gagal menyimpan ke database' }, { status: 500 });
   }
 }
 
-// DELETE: Admin menghapus paket dari web
+// 3. DELETE: Hapus paket PERMANEN dari Database
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     const adminKey = searchParams.get('adminKey');
 
-   if (adminKey !== 'abelcawangununganbejen') {
-      return NextResponse.json({ error: 'Akses ditolak' }, { status: 401 });
+    if (adminKey !== ADMIN_SECRET) {
+      return NextResponse.json({ error: 'Akses ditolak: Password admin salah' }, { status: 401 });
     }
 
-    globalPaketList = globalPaketList.filter((p) => p.id !== id);
+    if (!id) {
+      return NextResponse.json({ error: 'ID paket tidak ditemukan' }, { status: 400 });
+    }
 
-    return NextResponse.json({ success: true, data: globalPaketList });
+    await (prisma as any).program.delete({
+      where: { id: String(id) },
+    });
+
+    return NextResponse.json({ success: true });
   } catch (err: any) {
-    return NextResponse.json({ error: 'Gagal menghapus paket' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Gagal menghapus dari database' }, { status: 500 });
   }
 }
