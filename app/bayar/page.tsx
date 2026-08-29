@@ -42,6 +42,7 @@ function playSuccessSound(customText?: string) {
         osc.stop(ctx.currentTime + start + duration);
       };
 
+      // Melodi Bell Kasir (C5 - E5 - G5 - C6)
       playTone(523.25, 0.0, 0.35);
       playTone(659.25, 0.12, 0.35);
       playTone(783.99, 0.24, 0.4);
@@ -51,6 +52,7 @@ function playSuccessSound(customText?: string) {
     console.error('Audio error:', e);
   }
 
+  // Asisten Suara Bahasa Indonesia
   setTimeout(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -71,6 +73,7 @@ export default function TerminalKasirUniversal() {
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>('');
 
+  // Status Lunas Otomatis
   const [autoSuccessTrxId, setAutoSuccessTrxId] = useState<string | null>(null);
 
   // Panel Admin
@@ -83,7 +86,7 @@ export default function TerminalKasirUniversal() {
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Deteksi Transaksi Selesai & Bunyi Otomatis
+  // Deteksi Otomatis Transaksi Lunas saat Kembali dari Gateway
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -133,7 +136,6 @@ export default function TerminalKasirUniversal() {
     loadPaket();
   }, []);
 
-  // Buat Transaksi QRIS
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
@@ -144,7 +146,7 @@ export default function TerminalKasirUniversal() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nama: 'Pelanggan POS',
+          nama: 'Pelanggan Kasir',
           whatsapp: '08123456789',
           paket: paketPilihan.title,
           nominal: Number(paketPilihan.price),
@@ -154,7 +156,7 @@ export default function TerminalKasirUniversal() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert('Gagal membuat QRIS: ' + (data?.error || data?.message || 'Respon tidak valid'));
+        alert('Gateway Error: ' + (data?.error || data?.message || `Kode respon ${res.status}`));
         setLoading(false);
         return;
       }
@@ -163,11 +165,11 @@ export default function TerminalKasirUniversal() {
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
-        alert('Respon sukses tetapi tautan QRIS tidak ditemukan.');
+        alert('Tautan pembayaran QRIS tidak ditemukan dari gateway.');
         setLoading(false);
       }
     } catch (err: any) {
-      alert('Koneksi ke backend terputus: ' + (err?.message || 'Cek jaringan'));
+      alert('Gagal menghubungi backend: ' + (err?.message || 'Cek koneksi internet'));
       setLoading(false);
     }
   };
