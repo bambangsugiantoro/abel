@@ -144,7 +144,7 @@ export default function HalamanPembayaran() {
         {/* TAMPILAN SISWA */}
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-200">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-black text-gray-800">Pembayaran Bimbel Ayo Belajar</h1>
+            <h1 className="text-2xl font-black text-gray-800">Pembayaran QRIS</h1>
             <p className="text-sm text-gray-500 mt-1">Pilih paket dan bayar instan via QRIS</p>
           </div>
 
