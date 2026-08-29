@@ -2,6 +2,25 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
+function getCheckoutUrl(response: any): string {
+  if (!response) return '';
+  let url = '';
+  const search = (item: any) => {
+    if (!item) return;
+    if (
+      typeof item === 'string' &&
+      item.startsWith('http') &&
+      (item.includes('checkout') || item.includes('pymnt') || item.includes('pay') || item.includes('invoice'))
+    ) {
+      if (!url) url = item;
+    } else if (typeof item === 'object') {
+      for (const k of Object.keys(item)) search(item[k]);
+    }
+  };
+  search(response);
+  return url;
+}
+
 // Sound Engine: Harmonic Chime + Voice Assistant
 function triggerPaymentSuccessAudio(nominal: number, itemTitle: string) {
   try {
@@ -112,7 +131,7 @@ export default function CashierTerminalLiveSound() {
   useEffect(() => {
     if (showQrisModal && paymentStatus === 'PENDING') {
       pollingTimerRef.current = setInterval(async () => {
-        // Cek status berkala ke API jika ada endpoint status atau simulasikan verifikasi
+        // Cek status berkala ke API
       }, 3000);
     }
     return () => {
