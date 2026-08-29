@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// Global Audio Engine Instance
 let globalAudioCtx: AudioContext | null = null;
 
 function unlockAudioContext() {
@@ -17,8 +16,7 @@ function unlockAudioContext() {
   return globalAudioCtx;
 }
 
-// Sound Engine: Harmonic Bell Chime + Voice Assistant
-function triggerPaymentSuccessSound(nominal: number, itemTitle: string) {
+function playSuccessSound(customText?: string) {
   try {
     const ctx = unlockAudioContext();
     if (ctx) {
@@ -35,7 +33,6 @@ function triggerPaymentSuccessSound(nominal: number, itemTitle: string) {
         osc.stop(ctx.currentTime + start + duration);
       };
 
-      // Melodi Chime Kasir (C5 - E5 - G5 - C6)
       playTone(523.25, 0.0, 0.35);
       playTone(659.25, 0.12, 0.35);
       playTone(783.99, 0.24, 0.4);
@@ -45,11 +42,10 @@ function triggerPaymentSuccessSound(nominal: number, itemTitle: string) {
     console.error('Audio error:', e);
   }
 
-  // Voice Assistant Bahasa Indonesia
   setTimeout(() => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      const text = `Pembayaran ${itemTitle} sebesar ${nominal.toLocaleString('id-ID')} rupiah berhasil diterima. Terima kasih!`;
+      const text = customText || 'Pembayaran berhasil diterima. Transaksi lunas, terima kasih!';
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'id-ID';
       utterance.rate = 0.95;
@@ -59,30 +55,27 @@ function triggerPaymentSuccessSound(nominal: number, itemTitle: string) {
   }, 450);
 }
 
-export default function CashierTerminalFullAuto() {
+export default function TerminalKasirAutoSound() {
   const [daftarPaket, setDaftarPaket] = useState<any[]>([]);
   const [paketPilihan, setPaketPilihan] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>('');
 
-  // QRIS Popup State
   const [showQrisModal, setShowQrisModal] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState('');
   const [activeTrxData, setActiveTrxData] = useState<{ title: string; price: number; trxId?: string } | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
 
-  // Admin Controls
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [passInput, setPassInput] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // Opsi tampilkan password
+  const [showPassword, setShowPassword] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newPrice, setNewPrice] = useState<number | ''>('');
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Unmute audio pada klik pertama
   useEffect(() => {
     const handleInitClick = () => {
       unlockAudioContext();
@@ -91,7 +84,6 @@ export default function CashierTerminalFullAuto() {
     return () => window.removeEventListener('click', handleInitClick);
   }, []);
 
-  // Jam Realtime
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
@@ -129,20 +121,18 @@ export default function CashierTerminalFullAuto() {
     loadPaket();
   }, []);
 
-  // 1. Auto Detector saat Redirect dari Gateway
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const trxId = params.get('transactionId') || params.get('trx_id') || params.get('order_id');
       if (trxId) {
         unlockAudioContext();
-        triggerPaymentSuccessSound(1500, 'Transaksi QRIS');
+        playSuccessSound('Pembayaran transaksi QRIS berhasil diterima. Transaksi lunas, terima kasih!');
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
   }, []);
 
-  // 2. Polling Otomatis Status Lunas saat QRIS Aktif di Layar
   useEffect(() => {
     let timer: any;
     if (showQrisModal && paymentStatus === 'PENDING' && activeTrxData?.trxId) {
@@ -153,7 +143,7 @@ export default function CashierTerminalFullAuto() {
             const data = await res.json();
             if (data.status === 'PAID' || data.paid === true) {
               setPaymentStatus('SUCCESS');
-              triggerPaymentSuccessSound(activeTrxData.price, activeTrxData.title);
+              playSuccessSound(`Pembayaran ${activeTrxData.title} sebesar ${activeTrxData.price.toLocaleString('id-ID')} rupiah berhasil diterima.`);
               setTimeout(() => {
                 setShowQrisModal(false);
                 setPaymentStatus('PENDING');
@@ -161,7 +151,7 @@ export default function CashierTerminalFullAuto() {
             }
           }
         } catch {
-          // ignore polling error
+          // ignore error
         }
       }, 2500);
     }
@@ -288,9 +278,8 @@ export default function CashierTerminalFullAuto() {
           <div className="font-semibold text-slate-500">{currentTime || '00:00:00 WIB'}</div>
         </div>
 
-        {/* CONTAINER UTAMA POS */}
+        {/* CONTAINER POS */}
         <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_-12px_rgba(15,23,42,0.08)] relative overflow-hidden ring-1 ring-slate-900/5">
-          
           <div className="absolute top-0 right-0 w-48 h-48 bg-amber-200/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-200/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -354,7 +343,6 @@ export default function CashierTerminalFullAuto() {
               )}
             </div>
 
-            {/* Total Tagihan */}
             {paketPilihan && (
               <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2">
                 <div className="flex justify-between text-xs text-slate-500 font-medium">
@@ -370,7 +358,6 @@ export default function CashierTerminalFullAuto() {
               </div>
             )}
 
-            {/* Uji Suara */}
             <div className="flex justify-between items-center px-1">
               <button
                 type="button"
@@ -382,7 +369,6 @@ export default function CashierTerminalFullAuto() {
               <span className="text-[10px] text-slate-400 font-mono">Auto Soundbox</span>
             </div>
 
-            {/* Tombol Tampilkan QRIS */}
             <button
               type="submit"
               disabled={loading || daftarPaket.length === 0}
@@ -400,7 +386,7 @@ export default function CashierTerminalFullAuto() {
           </form>
         </div>
 
-        {/* MODAL POPUP QRIS */}
+        {/* MODAL QRIS */}
         {showQrisModal && activeTrxData && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4 animate-in fade-in zoom-in duration-200">
@@ -466,7 +452,7 @@ export default function CashierTerminalFullAuto() {
           </button>
         </div>
 
-        {/* ADMIN CONTROL PANEL DENGAN FITUR TOGGLE LIHAT PASSWORD */}
+        {/* ADMIN CONTROL PANEL */}
         {showAdmin && (
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl relative z-10">
             {!isAdminAuth ? (
@@ -476,7 +462,7 @@ export default function CashierTerminalFullAuto() {
                   <div className="relative flex-1">
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Sandi Administrator (abelsaja)..."
+                      placeholder="Masukkan sandi akses..."
                       value={passInput}
                       onChange={(e) => setPassInput(e.target.value)}
                       className="w-full px-3.5 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:bg-white transition"
@@ -493,7 +479,7 @@ export default function CashierTerminalFullAuto() {
                   <button
                     onClick={() => {
                       if (passInput === 'abelsaja') setIsAdminAuth(true);
-                      else alert('Password salah! Password yang benar: abelsaja');
+                      else alert('Akses ditolak: Sandi yang dimasukkan salah.');
                     }}
                     className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition shadow-sm"
                   >
