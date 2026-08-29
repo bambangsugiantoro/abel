@@ -241,7 +241,7 @@ export default function HalamanPembayaran() {
                   />
                   <button
                     onClick={() => {
-                      if (passInput === 'AyoBelajar2026') setIsAdminAuth(true);
+                      if (passInput === 'abelcawangununganbejen') setIsAdminAuth(true);
                       else alert('Password admin salah!');
                     }}
                     className="px-4 py-2 bg-gray-800 text-white rounded-lg text-xs font-bold"
