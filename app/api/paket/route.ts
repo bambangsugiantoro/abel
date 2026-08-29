@@ -72,7 +72,7 @@ export async function DELETE(req: Request) {
     const id = searchParams.get('id');
     const adminKey = searchParams.get('adminKey');
 
-    if (adminKey !== 'AyoBelajar2026') {
+   if (adminKey !== 'abelcawangununganbejen') {
       return NextResponse.json({ error: 'Akses ditolak' }, { status: 401 });
     }
 
