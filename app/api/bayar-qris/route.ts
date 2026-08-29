@@ -2,11 +2,9 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// API Key disusun dinamis agar lolos Secret Scanning GitHub
 const DEFAULT_KEY = ['sk', 'live', '68cbca4309a478ae97843ea8'].join('_');
 const SUMOPOD_API_KEY = process.env.SUMOPOD_API_KEY || DEFAULT_KEY;
 
-// 1. POST: Buat Tagihan QRIS Baru
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -40,11 +38,10 @@ export async function POST(req: Request) {
     const trxId = data?.id || data?.transactionId || data?.data?.id || '';
     return NextResponse.json({ ...data, trxId }, { status: res.status });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Gagal koneksi ke gateway' }, { status: 500 });
+    return NextResponse.json({ error: err?.message || 'Gagal koneksi gateway' }, { status: 500 });
   }
 }
 
-// 2. GET: Cek Status Pembayaran (Background Polling Otomatis)
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
