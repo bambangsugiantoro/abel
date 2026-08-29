@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const ADMIN_SECRET = 'abelcawangununganbejen';
+const ADMIN_SECRET = 'abelsaja';
 
 // Default dibuat KOSONG TOTAL
 let storagePaket: Array<{
