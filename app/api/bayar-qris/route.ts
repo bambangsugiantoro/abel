@@ -12,10 +12,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Nominal tidak valid' }, { status: 400 });
     }
 
-    // API Key BIMBEL AYO BELAJAR
     const apiKey = '4e3f86ca7ec2f8e7c580322674ec6de4da04ab85891778128557ab25cb86ed8c';
 
-    // Format Payload Resmi SumoPod
     const payload = {
       order_id: `ABEL-${Date.now()}`,
       amount: nominal,
@@ -31,6 +29,8 @@ export async function POST(req: Request) {
       headers: {
         'Content-Type': 'application/json',
         'X-Api-Key': apiKey,
+        'x-api-key': apiKey,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(payload),
       cache: 'no-store',
