@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 
-// Fungsi mendeteksi tautan checkout resmi SumoPod
 function getCheckoutUrl(response: any): string {
   if (!response) return '';
   let url = '';
@@ -39,9 +38,6 @@ export default function HalamanPembayaran() {
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const ADMIN_PASS = 'AyoBelajar2026';
-
-  // Memuat data paket langsung dari database pusat
   const loadPaket = async () => {
     try {
       const res = await fetch('/api/paket', { cache: 'no-store' });
@@ -49,8 +45,6 @@ export default function HalamanPembayaran() {
       if (Array.isArray(data) && data.length > 0) {
         setDaftarPaket(data);
         setPaketPilihan(data[0]);
-      } else {
-        setDaftarPaket([]);
       }
     } catch (e) {
       console.error(e);
@@ -63,10 +57,9 @@ export default function HalamanPembayaran() {
     loadPaket();
   }, []);
 
-  // Proses pembayaran QRIS SumoPod
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paketPilihan) return alert('Silakan pilih paket bimbel terlebih dahulu');
+    if (!paketPilihan) return alert('Silakan pilih paket terlebih dahulu');
 
     setLoading(true);
     try {
@@ -77,7 +70,7 @@ export default function HalamanPembayaran() {
           nama,
           whatsapp,
           paket: paketPilihan.title,
-          nominal: paketPilihan.price,
+          nominal: Number(paketPilihan.price),
         }),
       });
 
@@ -87,16 +80,15 @@ export default function HalamanPembayaran() {
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
-        alert(data.error || 'Terjadi kendala pembuatan halaman pembayaran');
+        alert(data.error || 'Gagal membuat QRIS');
         setLoading(false);
       }
     } catch {
-      alert('Gagal terhubung ke server pembayaran');
+      alert('Gagal terhubung ke server');
       setLoading(false);
     }
   };
 
-  // Tambah paket ke Database
   const handleTambahPaket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newPrice) return alert('Nama dan harga paket wajib diisi');
@@ -109,19 +101,20 @@ export default function HalamanPembayaran() {
         body: JSON.stringify({
           title: newTitle,
           price: Number(newPrice),
-          shortDesc: newDesc || 'Paket Bimbingan Belajar',
+          shortDesc: newDesc,
+          adminKey: passInput,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        alert('Paket berhasil tersimpan di Database Pusat!');
+        alert('Paket berhasil ditambahkan ke server!');
         setNewTitle('');
         setNewPrice('');
         setNewDesc('');
         loadPaket();
       } else {
-        alert(data.error || 'Gagal menyimpan ke database');
+        alert(data.error || 'Gagal menambahkan paket');
       }
     } catch {
       alert('Gagal menghubungi server');
@@ -130,25 +123,25 @@ export default function HalamanPembayaran() {
     }
   };
 
-  // Hapus paket dari Database
   const handleHapusPaket = async (id: string) => {
-    if (!confirm('Hapus paket ini secara permanen dari database?')) return;
+    if (!confirm('Hapus paket ini?')) return;
     try {
-      const res = await fetch(`/api/paket?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
+      const res = await fetch(`/api/paket?id=${id}&adminKey=${passInput}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
         loadPaket();
       } else {
-        alert('Gagal menghapus paket');
+        alert(data.error || 'Gagal menghapus');
       }
     } catch {
-      alert('Gagal menghapus paket');
+      alert('Gagal menghapus');
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-xl mx-auto space-y-4">
-        {/* FORM PEMBAYARAN SISWA */}
+        {/* TAMPILAN SISWA */}
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-200">
           <div className="text-center mb-6">
             <h1 className="text-2xl font-black text-gray-800">Pembayaran Bimbel Ayo Belajar</h1>
@@ -160,11 +153,7 @@ export default function HalamanPembayaran() {
               <label className="block text-xs font-bold text-gray-700 mb-2">PILIH PAKET BIMBEL</label>
               
               {loadingData ? (
-                <div className="p-6 text-center text-xs text-gray-400">Memuat paket dari database...</div>
-              ) : daftarPaket.length === 0 ? (
-                <div className="p-4 border border-dashed rounded-xl text-center text-xs text-gray-500">
-                  Belum ada paket bimbel di database. Buka menu Admin di bawah untuk menambahkan.
-                </div>
+                <div className="p-6 text-center text-xs text-gray-400">Memuat paket...</div>
               ) : (
                 <div className="space-y-2">
                   {daftarPaket.map((p) => (
@@ -179,7 +168,7 @@ export default function HalamanPembayaran() {
                     >
                       <div>
                         <p className="text-sm font-bold text-gray-800">{p.title}</p>
-                        <p className="text-xs text-gray-500">{p.shortDesc || '-'}</p>
+                        <p className="text-xs text-gray-500">{p.shortDesc}</p>
                       </div>
                       <span className="text-sm font-black text-emerald-600">
                         Rp {(Number(p.price) || 0).toLocaleString('id-ID')}
@@ -226,7 +215,7 @@ export default function HalamanPembayaran() {
           </form>
         </div>
 
-        {/* TOMBOL TOGGLE ADMIN */}
+        {/* TOGGLE ADMIN */}
         <div className="text-center">
           <button
             onClick={() => setShowAdmin(!showAdmin)}
@@ -236,12 +225,12 @@ export default function HalamanPembayaran() {
           </button>
         </div>
 
-        {/* PANEL ADMIN DATABASE */}
+        {/* PANEL KHUSUS ADMIN */}
         {showAdmin && (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
             {!isAdminAuth ? (
               <div className="space-y-3">
-                <h3 className="text-sm font-bold text-gray-800">Verifikasi Admin</h3>
+                <h3 className="text-sm font-bold text-gray-800">Login Admin</h3>
                 <div className="flex gap-2">
                   <input
                     type="password"
@@ -252,19 +241,19 @@ export default function HalamanPembayaran() {
                   />
                   <button
                     onClick={() => {
-                      if (passInput === ADMIN_PASS) setIsAdminAuth(true);
-                      else alert('Password salah!');
+                      if (passInput === 'AyoBelajar2026') setIsAdminAuth(true);
+                      else alert('Password admin salah!');
                     }}
                     className="px-4 py-2 bg-gray-800 text-white rounded-lg text-xs font-bold"
                   >
-                    Buka
+                    Masuk
                   </button>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b pb-2">
-                  <h3 className="text-sm font-bold text-gray-800">➕ Tambah Paket ke Database</h3>
+                  <h3 className="text-sm font-bold text-gray-800">➕ Tambah Paket Bimbel (Server Pusat)</h3>
                 </div>
 
                 <form onSubmit={handleTambahPaket} className="space-y-3">
@@ -305,11 +294,11 @@ export default function HalamanPembayaran() {
                     disabled={saving}
                     className="w-full py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-50"
                   >
-                    {saving ? 'Menyimpan ke Database...' : 'Simpan & Publikasikan'}
+                    {saving ? 'Menyimpan ke Server...' : 'Simpan & Publikasikan ke Siswa'}
                   </button>
                 </form>
 
-                <h3 className="text-sm font-bold text-gray-800 border-b pt-3 pb-2">Daftar Paket di Database</h3>
+                <h3 className="text-sm font-bold text-gray-800 border-b pt-3 pb-2">Daftar Paket Aktif</h3>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {daftarPaket.map((p) => (
                     <div
