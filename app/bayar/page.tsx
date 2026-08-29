@@ -21,7 +21,7 @@ function getCheckoutUrl(response: any): string {
   return url;
 }
 
-// Engine Suara Lonceng Kasir + Voice Assistant Bahasa Indonesia
+// Suara Kasir + Voice Assistant Bahasa Indonesia
 function playSuccessSound(customText?: string) {
   try {
     const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -42,7 +42,6 @@ function playSuccessSound(customText?: string) {
         osc.stop(ctx.currentTime + start + duration);
       };
 
-      // Melodi Chime Kasir (C5 - E5 - G5 - C6)
       playTone(523.25, 0.0, 0.35);
       playTone(659.25, 0.12, 0.35);
       playTone(783.99, 0.24, 0.4);
@@ -72,10 +71,9 @@ export default function TerminalKasirUniversal() {
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>('');
 
-  // Notifikasi Sukses Otomatis
   const [autoSuccessTrxId, setAutoSuccessTrxId] = useState<string | null>(null);
 
-  // Admin Controls
+  // Panel Admin
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [passInput, setPassInput] = useState('');
@@ -85,7 +83,7 @@ export default function TerminalKasirUniversal() {
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // 1. Deteksi Otomatis Transaksi Lunas & Bunyikan Suara
+  // Deteksi Transaksi Selesai & Bunyi Otomatis
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -135,7 +133,7 @@ export default function TerminalKasirUniversal() {
     loadPaket();
   }, []);
 
-  // Pemanggilan API Backend Internal
+  // Buat Transaksi QRIS
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
@@ -146,23 +144,17 @@ export default function TerminalKasirUniversal() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nama: 'Pelanggan Kasir',
+          nama: 'Pelanggan POS',
           whatsapp: '08123456789',
           paket: paketPilihan.title,
           nominal: Number(paketPilihan.price),
         }),
       });
 
-      const textRes = await res.text();
-      let data: any = {};
-      try {
-        data = JSON.parse(textRes);
-      } catch {
-        data = { raw: textRes };
-      }
+      const data = await res.json();
 
       if (!res.ok) {
-        alert(data?.error || data?.message || `Gagal (${res.status}): Cek konfigurasi`);
+        alert('Gagal membuat QRIS: ' + (data?.error || data?.message || 'Respon tidak valid'));
         setLoading(false);
         return;
       }
@@ -171,11 +163,11 @@ export default function TerminalKasirUniversal() {
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
-        alert('Respon diterima namun link QRIS tidak ditemukan.');
+        alert('Respon sukses tetapi tautan QRIS tidak ditemukan.');
         setLoading(false);
       }
     } catch (err: any) {
-      alert('Koneksi ke backend gagal: ' + (err?.message || 'Jaringan sibuk'));
+      alert('Koneksi ke backend terputus: ' + (err?.message || 'Cek jaringan'));
       setLoading(false);
     }
   };
@@ -213,7 +205,7 @@ export default function TerminalKasirUniversal() {
         alert(data.error || 'Gagal menambahkan data');
       }
     } catch {
-      alert('Gagal menghubungi database');
+      alert('Gagal menghubungi server database');
     } finally {
       setSaving(false);
     }
