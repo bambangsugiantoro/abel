@@ -109,7 +109,7 @@ export default function TerminalKasirLiveAutoSound() {
     loadPaket();
   }, []);
 
-  // Background Polling Checker: Mendeteksi saat pembayaran selesai secara otomatis
+  // Background Polling Checker: Cek status bayar otomatis ke gateway tiap 2.5 detik
   useEffect(() => {
     let timer: any;
     if (showQrisModal && paymentStatus === 'PENDING') {
@@ -142,7 +142,7 @@ export default function TerminalKasirLiveAutoSound() {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
 
-    // Unmute Web Audio context on user action
+    // Unmute Web Audio context
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (AudioCtx) {
       const ctx = new AudioCtx();
@@ -200,17 +200,6 @@ export default function TerminalKasirLiveAutoSound() {
     }
   };
 
-  // Trigger Instant Lunas & Suara
-  const triggerSuccessManual = () => {
-    if (!activeTrxData) return;
-    setPaymentStatus('SUCCESS');
-    playSuccessSound(`Pembayaran ${activeTrxData.title} sebesar ${activeTrxData.price.toLocaleString('id-ID')} rupiah berhasil diterima.`);
-    setTimeout(() => {
-      setShowQrisModal(false);
-      setPaymentStatus('PENDING');
-    }, 4500);
-  };
-
   const handleTambahPaket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newPrice) return alert('Nama dan nominal item wajib diisi');
@@ -261,7 +250,7 @@ export default function TerminalKasirLiveAutoSound() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/90 to-amber-50/40 text-slate-800 py-10 px-4 flex items-center justify-center font-sans antialiased selection:bg-emerald-200">
+    <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-50/50 via-slate-50 to-emerald-50/40 text-slate-800 py-10 px-4 flex items-center justify-center font-sans antialiased selection:bg-emerald-200">
       <div className="max-w-md w-full space-y-4">
         
         {/* TOP STATUS BAR */}
@@ -386,7 +375,7 @@ export default function TerminalKasirLiveAutoSound() {
           </form>
         </div>
 
-        {/* MODAL POPUP QRIS + DETEKSI OTOMATIS SUARA */}
+        {/* MODAL POPUP QRIS (HANYA QRIS & STATUS SCAN) */}
         {showQrisModal && activeTrxData && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4 animate-in fade-in zoom-in duration-200">
@@ -424,15 +413,8 @@ export default function TerminalKasirLiveAutoSound() {
                   <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
                     <button
                       type="button"
-                      onClick={triggerSuccessManual}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-1.5"
-                    >
-                      <span>⚡ Konfirmasi Lunas & Bunyikan Suara</span>
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setShowQrisModal(false)}
-                      className="text-xs text-slate-400 hover:text-slate-600 font-semibold"
+                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs transition"
                     >
                       Tutup
                     </button>
