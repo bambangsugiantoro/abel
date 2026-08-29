@@ -21,7 +21,7 @@ function getCheckoutUrl(response: any): string {
   return url;
 }
 
-// Suara Kasir + Voice Assistant Bahasa Indonesia
+// Engine Suara Lonceng Kasir + Voice Assistant Bahasa Indonesia
 function playSuccessSound(customText?: string) {
   try {
     const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -42,7 +42,7 @@ function playSuccessSound(customText?: string) {
         osc.stop(ctx.currentTime + start + duration);
       };
 
-      // Nada Bell Kasir (C5 - E5 - G5 - C6)
+      // Melodi Chime Kasir (C5 - E5 - G5 - C6)
       playTone(523.25, 0.0, 0.35);
       playTone(659.25, 0.12, 0.35);
       playTone(783.99, 0.24, 0.4);
@@ -52,7 +52,6 @@ function playSuccessSound(customText?: string) {
     console.error('Audio error:', e);
   }
 
-  // Voice Assistant Bahasa Indonesia
   setTimeout(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -73,9 +72,10 @@ export default function TerminalKasirUniversal() {
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>('');
 
+  // Notifikasi Sukses Otomatis
   const [autoSuccessTrxId, setAutoSuccessTrxId] = useState<string | null>(null);
 
-  // Panel Admin
+  // Admin Controls
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [passInput, setPassInput] = useState('');
@@ -85,7 +85,7 @@ export default function TerminalKasirUniversal() {
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Deteksi Transaksi Selesai & Bunyi Otomatis
+  // 1. Deteksi Otomatis Transaksi Lunas & Bunyikan Suara
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -97,7 +97,7 @@ export default function TerminalKasirUniversal() {
     }
   }, []);
 
-  // Jam Digital Real-time
+  // Jam Realtime
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
@@ -135,7 +135,7 @@ export default function TerminalKasirUniversal() {
     loadPaket();
   }, []);
 
-  // Handler Pembuatan QRIS
+  // Pemanggilan API Backend Internal
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
@@ -146,24 +146,36 @@ export default function TerminalKasirUniversal() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nama: 'Pelanggan POS',
+          nama: 'Pelanggan Kasir',
           whatsapp: '08123456789',
           paket: paketPilihan.title,
           nominal: Number(paketPilihan.price),
         }),
       });
 
-      const data = await res.json();
-      const checkoutUrl = getCheckoutUrl(data);
+      const textRes = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(textRes);
+      } catch {
+        data = { raw: textRes };
+      }
 
+      if (!res.ok) {
+        alert(data?.error || data?.message || `Gagal (${res.status}): Cek konfigurasi`);
+        setLoading(false);
+        return;
+      }
+
+      const checkoutUrl = getCheckoutUrl(data);
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
-        alert(data?.error || data?.message || 'Gagal menghasilkan tagihan QRIS');
+        alert('Respon diterima namun link QRIS tidak ditemukan.');
         setLoading(false);
       }
-    } catch {
-      alert('Koneksi ke gateway pembayaran terputus');
+    } catch (err: any) {
+      alert('Koneksi ke backend gagal: ' + (err?.message || 'Jaringan sibuk'));
       setLoading(false);
     }
   };
@@ -201,7 +213,7 @@ export default function TerminalKasirUniversal() {
         alert(data.error || 'Gagal menambahkan data');
       }
     } catch {
-      alert('Gagal menghubungi server database');
+      alert('Gagal menghubungi database');
     } finally {
       setSaving(false);
     }
