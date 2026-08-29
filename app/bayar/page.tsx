@@ -2,38 +2,22 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-function getCheckoutUrl(response: any): string {
-  if (!response) return '';
-  let url = '';
-  const search = (item: any) => {
-    if (!item) return;
-    if (
-      typeof item === 'string' &&
-      item.startsWith('http') &&
-      (item.includes('checkout') || item.includes('pymnt') || item.includes('pay') || item.includes('invoice'))
-    ) {
-      if (!url) url = item;
-    } else if (typeof item === 'object') {
-      for (const k of Object.keys(item)) search(item[k]);
-    }
-  };
-  search(response);
-  return url;
-}
-
 // Sound Engine: Bell Chime + Voice Assistant
 function playSuccessSound(customText?: string) {
   try {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (AudioCtx) {
       const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
 
       const playTone = (freq: number, start: number, duration: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        gain.gain.setValueAtTime(0.3, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0.35, ctx.currentTime + start);
         gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + duration);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -41,7 +25,7 @@ function playSuccessSound(customText?: string) {
         osc.stop(ctx.currentTime + start + duration);
       };
 
-      // Chime Nada Kasir (C5 - E5 - G5 - C6)
+      // Nada Bell Chime Kasir (C5 - E5 - G5 - C6)
       playTone(523.25, 0.0, 0.35);
       playTone(659.25, 0.12, 0.35);
       playTone(783.99, 0.24, 0.4);
@@ -62,18 +46,21 @@ function playSuccessSound(customText?: string) {
       utterance.pitch = 1.05;
       window.speechSynthesis.speak(utterance);
     }
-  }, 600);
+  }, 500);
 }
 
-export default function TerminalKasirAutoSound() {
+export default function TerminalKasirLiveAutoSound() {
   const [daftarPaket, setDaftarPaket] = useState<any[]>([]);
   const [paketPilihan, setPaketPilihan] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>('');
 
-  // Notifikasi Sukses Otomatis
-  const [autoSuccessTrxId, setAutoSuccessTrxId] = useState<string | null>(null);
+  // State Modal QRIS & Polling
+  const [showQrisModal, setShowQrisModal] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState('');
+  const [activeTrxData, setActiveTrxData] = useState<{ title: string; price: number; trxId?: string } | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
 
   // Admin Controls
   const [showAdmin, setShowAdmin] = useState(false);
@@ -83,20 +70,6 @@ export default function TerminalKasirAutoSound() {
   const [newPrice, setNewPrice] = useState<number | ''>('');
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
-
-  // 1. DETEKSI OTOMATIS SAAT REDIRECT DARI SUMOPOD / QRIS
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const trxId = params.get('transactionId') || params.get('trx_id') || params.get('order_id');
-
-      if (trxId) {
-        setAutoSuccessTrxId(trxId);
-        // Otomatis bunyikan suara detik itu juga saat halaman terbuka
-        playSuccessSound('Pembayaran transaksi QRIS berhasil diterima. Transaksi lunas, terima kasih!');
-      }
-    }
-  }, []);
 
   // Jam Realtime
   useEffect(() => {
@@ -136,9 +109,45 @@ export default function TerminalKasirAutoSound() {
     loadPaket();
   }, []);
 
+  // Background Polling Checker: Mendeteksi saat pembayaran selesai secara otomatis
+  useEffect(() => {
+    let timer: any;
+    if (showQrisModal && paymentStatus === 'PENDING') {
+      timer = setInterval(async () => {
+        try {
+          if (!activeTrxData?.trxId) return;
+          const checkRes = await fetch(`/api/bayar-qris?trxId=${activeTrxData.trxId}`, { cache: 'no-store' });
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            if (checkData.status === 'PAID' || checkData.status === 'SUCCESS' || checkData.paid) {
+              setPaymentStatus('SUCCESS');
+              playSuccessSound(`Pembayaran ${activeTrxData.title} sebesar ${activeTrxData.price.toLocaleString('id-ID')} rupiah berhasil diterima.`);
+              setTimeout(() => {
+                setShowQrisModal(false);
+                setPaymentStatus('PENDING');
+              }, 4500);
+            }
+          }
+        } catch (e) {
+          // ignore polling error
+        }
+      }, 2500);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [showQrisModal, paymentStatus, activeTrxData]);
+
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
+
+    // Unmute Web Audio context on user action
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+    }
 
     setLoading(true);
     try {
@@ -154,23 +163,52 @@ export default function TerminalKasirAutoSound() {
       });
 
       const data = await res.json();
-      const checkoutUrl = getCheckoutUrl(data);
 
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
+      let foundUrl = '';
+      let foundTrxId = data?.id || data?.transactionId || data?.order_id || '';
+
+      const search = (item: any) => {
+        if (!item) return;
+        if (
+          typeof item === 'string' &&
+          item.startsWith('http') &&
+          (item.includes('checkout') || item.includes('pymnt') || item.includes('pay') || item.includes('invoice'))
+        ) {
+          if (!foundUrl) foundUrl = item;
+        } else if (typeof item === 'object') {
+          for (const k of Object.keys(item)) search(item[k]);
+        }
+      };
+      search(data);
+
+      if (foundUrl) {
+        setCheckoutUrl(foundUrl);
+        setActiveTrxData({
+          title: paketPilihan.title,
+          price: Number(paketPilihan.price),
+          trxId: foundTrxId,
+        });
+        setPaymentStatus('PENDING');
+        setShowQrisModal(true);
       } else {
-        alert(data.error || 'Gagal menghasilkan tagihan QRIS');
-        setLoading(false);
+        alert(data.error || 'Gagal membuat tagihan QRIS');
       }
     } catch {
       alert('Koneksi ke gateway pembayaran terputus');
+    } finally {
       setLoading(false);
     }
   };
 
-  const tutupModalSukses = () => {
-    setAutoSuccessTrxId(null);
-    window.history.replaceState({}, document.title, window.location.pathname);
+  // Trigger Instant Lunas & Suara
+  const triggerSuccessManual = () => {
+    if (!activeTrxData) return;
+    setPaymentStatus('SUCCESS');
+    playSuccessSound(`Pembayaran ${activeTrxData.title} sebesar ${activeTrxData.price.toLocaleString('id-ID')} rupiah berhasil diterima.`);
+    setTimeout(() => {
+      setShowQrisModal(false);
+      setPaymentStatus('PENDING');
+    }, 4500);
   };
 
   const handleTambahPaket = async (e: React.FormEvent) => {
@@ -201,7 +239,7 @@ export default function TerminalKasirAutoSound() {
         alert(data.error || 'Gagal menambahkan data');
       }
     } catch {
-      alert('Gagal menghubungi database server');
+      alert('Gagal menghubungi server database');
     } finally {
       setSaving(false);
     }
@@ -238,7 +276,6 @@ export default function TerminalKasirAutoSound() {
         {/* CONTAINER UTAMA POS */}
         <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_-12px_rgba(15,23,42,0.08)] relative overflow-hidden ring-1 ring-slate-900/5">
           
-          {/* Aksen Glow Halus */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-amber-200/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-200/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -246,10 +283,10 @@ export default function TerminalKasirAutoSound() {
           <div className="text-center pb-6 border-b border-slate-100 relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold uppercase tracking-widest mb-2.5 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Auto Sound Notification
+              Live Soundbox Terminal
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">PAYMENT TERMINAL</h1>
-            <p className="text-xs text-slate-500 mt-1 font-medium">Pilih item pembayaran & selesaikan transaksi</p>
+            <p className="text-xs text-slate-500 mt-1 font-medium">Pilih item pembayaran & tampilkan QRIS</p>
           </div>
 
           <form onSubmit={handleBuatQRIS} className="space-y-5 pt-5 relative z-10">
@@ -303,7 +340,7 @@ export default function TerminalKasirAutoSound() {
               )}
             </div>
 
-            {/* Ringkasan Faktur */}
+            {/* Total Tagihan */}
             {paketPilihan && (
               <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2">
                 <div className="flex justify-between text-xs text-slate-500 font-medium">
@@ -311,7 +348,7 @@ export default function TerminalKasirAutoSound() {
                   <span className="font-bold text-slate-800 truncate max-w-[60%] text-right">{paketPilihan.title}</span>
                 </div>
                 <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Total Tagihan</span>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">Total Pembayaran</span>
                   <span className="text-xl font-black font-mono text-emerald-700 tracking-tight">
                     Rp {(Number(paketPilihan.price) || 0).toLocaleString('id-ID')}
                   </span>
@@ -319,19 +356,19 @@ export default function TerminalKasirAutoSound() {
               </div>
             )}
 
-            {/* Test Voice Button */}
+            {/* Uji Suara */}
             <div className="flex justify-between items-center px-1">
               <button
                 type="button"
-                onClick={() => playSuccessSound('Uji coba speaker terminal: Notifikasi suara aktif dan siap digunakan.')}
+                onClick={() => playSuccessSound('Uji speaker kasir: Notifikasi suara otomatis aktif dan siap digunakan.')}
                 className="text-[11px] text-slate-500 hover:text-emerald-700 flex items-center gap-1 font-semibold transition"
               >
-                <span>🔊 Uji Sound Notification</span>
+                <span>🔊 Uji Speaker Kasir</span>
               </button>
-              <span className="text-[10px] text-slate-400 font-mono">Real-time Audio</span>
+              <span className="text-[10px] text-slate-400 font-mono">Auto Soundbox</span>
             </div>
 
-            {/* Tombol Buka QRIS */}
+            {/* Tombol Tampilkan QRIS */}
             <button
               type="submit"
               disabled={loading || daftarPaket.length === 0}
@@ -340,7 +377,7 @@ export default function TerminalKasirAutoSound() {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Mempersiapkan QRIS...</span>
+                  <span>Membuka QRIS Kasir...</span>
                 </>
               ) : (
                 <span>Tampilkan QRIS Pembayaran 💳</span>
@@ -349,31 +386,67 @@ export default function TerminalKasirAutoSound() {
           </form>
         </div>
 
-        {/* POP-UP OTOMATIS SAAT PEMBAYARAN BERHASIL */}
-        {autoSuccessTrxId && (
-          <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl p-7 max-w-sm w-full shadow-2xl border border-emerald-100 text-center space-y-4 animate-in fade-in zoom-in duration-300">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl font-black animate-bounce shadow-inner">
-                ✓
-              </div>
+        {/* MODAL POPUP QRIS + DETEKSI OTOMATIS SUARA */}
+        {showQrisModal && activeTrxData && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl border border-slate-200 text-center space-y-4 animate-in fade-in zoom-in duration-200">
+              
+              {paymentStatus === 'PENDING' ? (
+                <>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-widest animate-pulse">
+                    Menunggu Pelanggan Scan QRIS...
+                  </div>
 
-              <div>
-                <h3 className="text-xl font-black text-slate-900">PEMBAYARAN LUNAS!</h3>
-                <p className="text-xs text-emerald-700 font-bold mt-0.5">Uang Berhasil Diterima</p>
-                <p className="text-[10px] text-slate-400 font-mono mt-2 break-all bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  ID: {autoSuccessTrxId}
-                </p>
-              </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">{activeTrxData.title}</h3>
+                    <p className="text-2xl font-black font-mono text-emerald-700 mt-1">
+                      Rp {activeTrxData.price.toLocaleString('id-ID')}
+                    </p>
+                  </div>
 
-              <div className="pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={tutupModalSukses}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs transition uppercase tracking-wider shadow-md shadow-emerald-600/20"
-                >
-                  Transaksi Berikutnya ➔
-                </button>
-              </div>
+                  {/* Frame Tampilan QRIS Langsung */}
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center">
+                    <iframe
+                      src={checkoutUrl}
+                      className="w-full h-72 rounded-xl border border-slate-200 bg-white"
+                      title="QRIS Gateway"
+                    />
+                    <a
+                      href={checkoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-emerald-700 hover:underline font-bold mt-2"
+                    >
+                      Buka di Tab Baru ↗
+                    </a>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={triggerSuccessManual}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-1.5"
+                    >
+                      <span>⚡ Konfirmasi Lunas & Bunyikan Suara</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowQrisModal(false)}
+                      className="text-xs text-slate-400 hover:text-slate-600 font-semibold"
+                    >
+                      Tutup
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="py-8 space-y-3">
+                  <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl font-black animate-bounce shadow-inner">
+                    ✓
+                  </div>
+                  <h3 className="text-xl font-black text-emerald-800">PEMBAYARAN LUNAS!</h3>
+                  <p className="text-xs text-slate-500 font-medium">Uang telah masuk. Notifikasi suara berbunyi otomatis.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
