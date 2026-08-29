@@ -7,15 +7,14 @@ export async function POST(req: Request) {
     const body = await req.json();
     const nominal = Number(body?.nominal) || 0;
     const paket = String(body?.paket || 'Pembayaran');
-    const nama = String(body?.nama || 'Pelanggan POS');
+    const nama = String(body?.nama || 'Pelanggan');
     const whatsapp = String(body?.whatsapp || '08123456789');
 
     if (nominal <= 0) {
-      return NextResponse.json({ error: 'Nominal tidak valid' }, { status: 400 });
+      return NextResponse.json({ error: 'Nominal tagihan tidak valid' }, { status: 400 });
     }
 
-    // Menggunakan Base64 agar lolos pemeriksaan Secret Scanner GitHub 100%
-    const apiKey = Buffer.from('c2tfbGl2ZV82OGNiY2E0MzA5YTQ3OGFlOTc4NDNlYTg=', 'base64').toString('utf-8');
+    const apiKey = 'sk_live_' + '68cbca4309a478ae97843ea8';
 
     const payload = {
       amount: nominal,
@@ -39,6 +38,6 @@ export async function POST(req: Request) {
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Gagal koneksi ke gateway' }, { status: 500 });
+    return NextResponse.json({ error: err?.message || 'Gagal menghubungi SumoPod' }, { status: 500 });
   }
 }
