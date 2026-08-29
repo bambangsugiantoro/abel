@@ -2,25 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 
-function getCheckoutUrl(response: any): string {
-  if (!response) return '';
-  let url = '';
-  const search = (item: any) => {
-    if (!item) return;
-    if (
-      typeof item === 'string' &&
-      item.startsWith('http') &&
-      (item.includes('checkout') || item.includes('pymnt') || item.includes('pay') || item.includes('invoice'))
-    ) {
-      if (!url) url = item;
-    } else if (typeof item === 'object') {
-      for (const k of Object.keys(item)) search(item[k]);
-    }
-  };
-  search(response);
-  return url;
-}
-
 // Engine Suara Lonceng Kasir + Voice Assistant Bahasa Indonesia
 function playSuccessSound(customText?: string) {
   try {
@@ -52,7 +33,6 @@ function playSuccessSound(customText?: string) {
     console.error('Audio error:', e);
   }
 
-  // Voice Assistant Bahasa Indonesia
   setTimeout(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -75,7 +55,7 @@ export default function TerminalKasirUniversal() {
 
   const [autoSuccessTrxId, setAutoSuccessTrxId] = useState<string | null>(null);
 
-  // Admin Controls
+  // Panel Admin
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [passInput, setPassInput] = useState('');
@@ -85,11 +65,11 @@ export default function TerminalKasirUniversal() {
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Deteksi Otomatis Transaksi Selesai & Bunyi Suara Kasir
+  // Deteksi Otomatis Transaksi Lunas saat Redirect Kembali dari SumoPod
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const trxId = params.get('transactionId') || params.get('trx_id') || params.get('order_id');
+      const trxId = params.get('transactionId') || params.get('order_id') || params.get('payment_id');
       if (trxId) {
         setAutoSuccessTrxId(trxId);
         playSuccessSound('Pembayaran transaksi QRIS berhasil diterima. Transaksi lunas, terima kasih!');
@@ -135,6 +115,7 @@ export default function TerminalKasirUniversal() {
     loadPaket();
   }, []);
 
+  // Membuka Halaman Pembayaran QRIS SumoPod
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
@@ -145,30 +126,29 @@ export default function TerminalKasirUniversal() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nama: 'Pelanggan Kasir',
-          whatsapp: '08123456789',
-          paket: paketPilihan.title,
           nominal: Number(paketPilihan.price),
+          paket: paketPilihan.title,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        alert('Gagal: ' + (data?.error || data?.message || `Kode respon ${res.status}`));
+        alert('Gagal: ' + (data?.error || data?.message || `Status ${res.status}`));
         setLoading(false);
         return;
       }
 
-      const checkoutUrl = getCheckoutUrl(data);
+      // Membaca URL checkout sesuai dokumentasi resmi SumoPod
+      const checkoutUrl = data?.payment_link_url || data?.paymentUrl || data?.url;
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
-        alert('Respon diterima namun tautan QRIS tidak ditemukan.');
+        alert('Tautan pembayaran QRIS tidak ditemukan di respon server.');
         setLoading(false);
       }
     } catch (err: any) {
-      alert('Koneksi ke server kasir terputus: ' + (err?.message || 'Cek koneksi internet'));
+      alert('Koneksi terputus: ' + (err?.message || 'Cek koneksi internet'));
       setLoading(false);
     }
   };
@@ -206,7 +186,7 @@ export default function TerminalKasirUniversal() {
         alert(data.error || 'Gagal menambahkan data');
       }
     } catch {
-      alert('Gagal menghubungi server database');
+      alert('Gagal menghubungi database');
     } finally {
       setSaving(false);
     }
