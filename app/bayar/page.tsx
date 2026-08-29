@@ -21,7 +21,7 @@ function getCheckoutUrl(response: any): string {
   return url;
 }
 
-// Sound Engine: Bell Chime + Voice Assistant
+// Sound Engine: Bell Chime Kasir + Voice Assistant
 function playSuccessSound(customText?: string) {
   try {
     const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -42,7 +42,7 @@ function playSuccessSound(customText?: string) {
         osc.stop(ctx.currentTime + start + duration);
       };
 
-      // Melodi Bell Chime Kasir (C5 - E5 - G5 - C6)
+      // Melodi Bell Kasir (C5 - E5 - G5 - C6)
       playTone(523.25, 0.0, 0.35);
       playTone(659.25, 0.12, 0.35);
       playTone(783.99, 0.24, 0.4);
@@ -66,7 +66,7 @@ function playSuccessSound(customText?: string) {
   }, 450);
 }
 
-export default function TerminalKasirUniversal() {
+export default function TerminalKasirDirect() {
   const [daftarPaket, setDaftarPaket] = useState<any[]>([]);
   const [paketPilihan, setPaketPilihan] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
@@ -86,7 +86,7 @@ export default function TerminalKasirUniversal() {
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // DETEKSI OTOMATIS SAAT TRANSAKSI LUNAS DARI GATEWAY
+  // DETEKSI OTOMATIS SAAT TRANSAKSI LUNAS DARI GATEWAY (AUTO SOUND)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -125,8 +125,8 @@ export default function TerminalKasirUniversal() {
       } else {
         setDaftarPaket([]);
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setDaftarPaket([]);
     } finally {
       setLoadingData(false);
     }
@@ -136,21 +136,31 @@ export default function TerminalKasirUniversal() {
     loadPaket();
   }, []);
 
+  // MEMBUAT TRANSAKSI LANGSUNG KE SUMOPOD
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
 
     setLoading(true);
     try {
-      const res = await fetch('/api/bayar-qris', {
+      const apiKey = ['sk', 'live', '68cbca4309a478ae97843ea8'].join('_');
+      const payload = {
+        amount: Number(paketPilihan.price),
+        title: String(paketPilihan.title),
+        description: `Order: ${paketPilihan.title} - Kasir POS`,
+        customerName: 'Pelanggan Kasir',
+        customerPhone: '08123456789',
+        redirectUrl: 'https://ayobelajarjogja.com/bayar',
+      };
+
+      const res = await fetch('https://api.sumopod.com/v1/payments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nama: 'Pelanggan POS',
-          whatsapp: '08123456789',
-          paket: paketPilihan.title,
-          nominal: Number(paketPilihan.price),
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -159,11 +169,11 @@ export default function TerminalKasirUniversal() {
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
-        alert(data.error || 'Gagal menghasilkan tagihan QRIS');
+        alert(data?.message || data?.error || 'Gagal menghasilkan tagihan QRIS');
         setLoading(false);
       }
-    } catch {
-      alert('Koneksi ke gateway pembayaran terputus');
+    } catch (err: any) {
+      alert('Koneksi ke gateway pembayaran gagal: ' + (err?.message || 'Jaringan sibuk'));
       setLoading(false);
     }
   };
