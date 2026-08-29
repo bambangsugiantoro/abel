@@ -21,7 +21,7 @@ function getCheckoutUrl(response: any): string {
   return url;
 }
 
-// Sound Engine: Bell Chime Kasir + Voice Assistant
+// Sound Engine: Harmonic Bell Kasir + Voice Assistant
 function playSuccessSound(customText?: string) {
   try {
     const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -66,7 +66,7 @@ function playSuccessSound(customText?: string) {
   }, 450);
 }
 
-export default function TerminalKasirDirect() {
+export default function TerminalKasirUniversal() {
   const [daftarPaket, setDaftarPaket] = useState<any[]>([]);
   const [paketPilihan, setPaketPilihan] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(true);
@@ -136,31 +136,22 @@ export default function TerminalKasirDirect() {
     loadPaket();
   }, []);
 
-  // MEMBUAT TRANSAKSI LANGSUNG KE SUMOPOD
+  // Request ke backend internal /api/bayar-qris
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
 
     setLoading(true);
     try {
-      const apiKey = ['sk', 'live', '68cbca4309a478ae97843ea8'].join('_');
-      const payload = {
-        amount: Number(paketPilihan.price),
-        title: String(paketPilihan.title),
-        description: `Order: ${paketPilihan.title} - Kasir POS`,
-        customerName: 'Pelanggan Kasir',
-        customerPhone: '08123456789',
-        redirectUrl: 'https://ayobelajarjogja.com/bayar',
-      };
-
-      const res = await fetch('https://api.sumopod.com/v1/payments', {
+      const res = await fetch('/api/bayar-qris', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nama: 'Pelanggan POS',
+          whatsapp: '08123456789',
+          paket: paketPilihan.title,
+          nominal: Number(paketPilihan.price),
+        }),
       });
 
       const data = await res.json();
@@ -169,11 +160,11 @@ export default function TerminalKasirDirect() {
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
-        alert(data?.message || data?.error || 'Gagal menghasilkan tagihan QRIS');
+        alert(data?.error || data?.message || 'Gagal menghasilkan tagihan QRIS');
         setLoading(false);
       }
-    } catch (err: any) {
-      alert('Koneksi ke gateway pembayaran gagal: ' + (err?.message || 'Jaringan sibuk'));
+    } catch {
+      alert('Koneksi ke gateway pembayaran terputus');
       setLoading(false);
     }
   };
