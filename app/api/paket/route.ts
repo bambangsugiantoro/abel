@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     const { title, price, shortDesc, adminKey } = body;
 
     // Proteksi hanya admin yang tahu key ini
-    if (adminKey !== 'AyoBelajar2026') {
+    if (adminKey !== 'abelcawangununganbejen') {
       return NextResponse.json({ error: 'Akses ditolak: Password admin salah' }, { status: 401 });
     }
 
