@@ -145,12 +145,12 @@ export default function HalamanPembayaran() {
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-200">
           <div className="text-center mb-6">
             <h1 className="text-2xl font-black text-gray-800">Pembayaran QRIS</h1>
-            <p className="text-sm text-gray-500 mt-1">Pilih paket dan bayar instan via QRIS</p>
+            <p className="text-sm text-gray-500 mt-1">Pilih program dan bayar instan via QRIS</p>
           </div>
 
           <form onSubmit={handleBuatQRIS} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-2">PILIH PAKET BIMBEL</label>
+              <label className="block text-xs font-bold text-gray-700 mb-2">PILIH PROGRAM</label>
               
               {loadingData ? (
                 <div className="p-6 text-center text-xs text-gray-400">Memuat paket...</div>
@@ -184,7 +184,7 @@ export default function HalamanPembayaran() {
               <input
                 type="text"
                 required
-                placeholder="Contoh: Budi Santoso"
+                placeholder="Contoh: Alisa"
                 value={nama}
                 onChange={(e) => setNama(e.target.value)}
                 className="w-full p-2.5 border rounded-lg text-sm focus:border-emerald-500 focus:outline-none"
@@ -221,7 +221,7 @@ export default function HalamanPembayaran() {
             onClick={() => setShowAdmin(!showAdmin)}
             className="text-xs text-gray-400 hover:text-gray-600 underline font-medium"
           >
-            {showAdmin ? 'Tutup Pengelola Paket' : '⚙️ Kelola Paket Bimbel (Admin)'}
+            {showAdmin ? 'Tutup Pengelola Paket' : '⚙️ Kelola Program (Admin)'}
           </button>
         </div>
 
@@ -253,7 +253,7 @@ export default function HalamanPembayaran() {
             ) : (
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b pb-2">
-                  <h3 className="text-sm font-bold text-gray-800">➕ Tambah Paket Bimbel (Server Pusat)</h3>
+                  <h3 className="text-sm font-bold text-gray-800">➕ Tambah Program (Server Pusat)</h3>
                 </div>
 
                 <form onSubmit={handleTambahPaket} className="space-y-3">
@@ -294,7 +294,7 @@ export default function HalamanPembayaran() {
                     disabled={saving}
                     className="w-full py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-50"
                   >
-                    {saving ? 'Menyimpan ke Server...' : 'Simpan & Publikasikan ke Siswa'}
+                    {saving ? 'Menyimpan ke Server...' : 'Simpan'}
                   </button>
                 </form>
 
