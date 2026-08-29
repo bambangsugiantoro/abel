@@ -21,7 +21,7 @@ function getCheckoutUrl(response: any): string {
   return url;
 }
 
-// Engine Suara: Lonceng Kasir + Suara Asisten Bahasa Indonesia
+// Suara Kasir + Voice Assistant Bahasa Indonesia
 function playSuccessSound(customText?: string) {
   try {
     const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -42,7 +42,7 @@ function playSuccessSound(customText?: string) {
         osc.stop(ctx.currentTime + start + duration);
       };
 
-      // Melodi Lonceng Kasir (C5 - E5 - G5 - C6)
+      // Nada Bell Kasir (C5 - E5 - G5 - C6)
       playTone(523.25, 0.0, 0.35);
       playTone(659.25, 0.12, 0.35);
       playTone(783.99, 0.24, 0.4);
@@ -52,7 +52,7 @@ function playSuccessSound(customText?: string) {
     console.error('Audio error:', e);
   }
 
-  // Suara Asisten Bahasa Indonesia
+  // Voice Assistant Bahasa Indonesia
   setTimeout(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -73,10 +73,9 @@ export default function TerminalKasirUniversal() {
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>('');
 
-  // Notifikasi Sukses Otomatis
   const [autoSuccessTrxId, setAutoSuccessTrxId] = useState<string | null>(null);
 
-  // Kontrol Admin
+  // Panel Admin
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [passInput, setPassInput] = useState('');
@@ -86,7 +85,7 @@ export default function TerminalKasirUniversal() {
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Deteksi Otomatis Saat Transaksi Selesai & Berbunyi Sendiri
+  // Deteksi Transaksi Selesai & Bunyi Otomatis
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -98,7 +97,7 @@ export default function TerminalKasirUniversal() {
     }
   }, []);
 
-  // Jam Realtime
+  // Jam Digital Real-time
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
@@ -136,7 +135,7 @@ export default function TerminalKasirUniversal() {
     loadPaket();
   }, []);
 
-  // Membuat Transaksi QRIS
+  // Handler Pembuatan QRIS
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
@@ -344,7 +343,7 @@ export default function TerminalKasirUniversal() {
           </form>
         </div>
 
-        {/* POP-UP OTOMATIS SAAT PEMBAYARAN LUNAS */}
+        {/* POP-UP SAAT LUNAS */}
         {autoSuccessTrxId && (
           <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-7 max-w-sm w-full shadow-2xl border border-emerald-100 text-center space-y-4 animate-in fade-in zoom-in duration-300">
@@ -383,7 +382,7 @@ export default function TerminalKasirUniversal() {
           </button>
         </div>
 
-        {/* PANEL ADMIN (PASSWORD abelsaja & FITUR MATA INTIP) */}
+        {/* PANEL ADMIN (PASSWORD abelsaja) */}
         {showAdmin && (
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl relative z-10">
             {!isAdminAuth ? (
