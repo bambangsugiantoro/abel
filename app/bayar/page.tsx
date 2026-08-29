@@ -21,7 +21,7 @@ function getCheckoutUrl(response: any): string {
   return url;
 }
 
-// Sound Engine: Harmonic Bell Kasir + Voice Assistant
+// Engine Suara: Lonceng Kasir + Suara Asisten Bahasa Indonesia
 function playSuccessSound(customText?: string) {
   try {
     const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -42,7 +42,7 @@ function playSuccessSound(customText?: string) {
         osc.stop(ctx.currentTime + start + duration);
       };
 
-      // Melodi Bell Kasir (C5 - E5 - G5 - C6)
+      // Melodi Lonceng Kasir (C5 - E5 - G5 - C6)
       playTone(523.25, 0.0, 0.35);
       playTone(659.25, 0.12, 0.35);
       playTone(783.99, 0.24, 0.4);
@@ -52,7 +52,7 @@ function playSuccessSound(customText?: string) {
     console.error('Audio error:', e);
   }
 
-  // Voice Assistant Bahasa Indonesia
+  // Suara Asisten Bahasa Indonesia
   setTimeout(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -76,7 +76,7 @@ export default function TerminalKasirUniversal() {
   // Notifikasi Sukses Otomatis
   const [autoSuccessTrxId, setAutoSuccessTrxId] = useState<string | null>(null);
 
-  // Admin Controls
+  // Kontrol Admin
   const [showAdmin, setShowAdmin] = useState(false);
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [passInput, setPassInput] = useState('');
@@ -86,7 +86,7 @@ export default function TerminalKasirUniversal() {
   const [newDesc, setNewDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // DETEKSI OTOMATIS SAAT TRANSAKSI LUNAS DARI GATEWAY (AUTO SOUND)
+  // Deteksi Otomatis Saat Transaksi Selesai & Berbunyi Sendiri
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -136,7 +136,7 @@ export default function TerminalKasirUniversal() {
     loadPaket();
   }, []);
 
-  // Request ke backend internal /api/bayar-qris
+  // Membuat Transaksi QRIS
   const handleBuatQRIS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paketPilihan) return alert('Silakan pilih salah satu item transaksi.');
@@ -227,7 +227,7 @@ export default function TerminalKasirUniversal() {
     <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-50/50 via-slate-50 to-emerald-50/40 text-slate-800 py-10 px-4 flex items-center justify-center font-sans antialiased selection:bg-emerald-200">
       <div className="max-w-md w-full space-y-4">
         
-        {/* STATUS BAR */}
+        {/* BAR STATUS */}
         <div className="flex justify-between items-center px-4 py-2 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl text-[11px] text-slate-600 font-mono tracking-tight shadow-sm">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
@@ -244,7 +244,7 @@ export default function TerminalKasirUniversal() {
           <div className="text-center pb-6 border-b border-slate-100 relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold uppercase tracking-widest mb-2.5 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Auto Soundbox Terminal
+              Notifikasi Suara Otomatis
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">PAYMENT TERMINAL</h1>
             <p className="text-xs text-slate-500 mt-1 font-medium">Pilih item pembayaran & selesaikan transaksi</p>
@@ -324,7 +324,7 @@ export default function TerminalKasirUniversal() {
               >
                 <span>🔊 Uji Speaker Kasir</span>
               </button>
-              <span className="text-[10px] text-slate-400 font-mono">Auto Soundbox</span>
+              <span className="text-[10px] text-slate-400 font-mono">Suara Otomatis</span>
             </div>
 
             <button
@@ -383,7 +383,7 @@ export default function TerminalKasirUniversal() {
           </button>
         </div>
 
-        {/* ADMIN CONTROL PANEL */}
+        {/* PANEL ADMIN (PASSWORD abelsaja & FITUR MATA INTIP) */}
         {showAdmin && (
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl relative z-10">
             {!isAdminAuth ? (
